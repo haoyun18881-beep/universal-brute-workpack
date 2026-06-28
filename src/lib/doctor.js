@@ -2,6 +2,8 @@ import http from 'http';
 import { buildTools } from '../tools/core.js';
 import { resolveProfile } from './profiles.js';
 import { createAgentAdapter } from './agent-adapter.js';
+import { workerPoolSettings } from './local-worker-pool.js';
+import { managedSidecarStatus, sidecarSettings } from './sidecar-manager.js';
 
 function checkNodeVersion() {
   const major = Number(process.versions.node.split('.')[0]);
@@ -46,19 +48,23 @@ export async function runDoctor(config) {
     agentAdapter: createAgentAdapter(config),
   };
   const tools = buildTools(context);
-  const sidecarMode = config.sidecar?.mode || 'inprocess';
+  const sidecar = sidecarSettings(config);
   return {
     ok: true,
     service: 'universal-brute-workpack',
-    version: '0.1.0',
+    version: '0.1.1',
     node: checkNodeVersion(),
     transport_default: config.transport,
     profile: profile.name,
     roots: config.roots,
     env: checkEnv(config),
+    worker_pool: workerPoolSettings(config),
+    sidecar: managedSidecarStatus(config),
     ports: {
       sse: await checkPort(config.port),
-      sidecar: sidecarMode === 'inprocess' ? { mode: 'inprocess', required: false } : await checkPort(18892),
+      sidecar: sidecar.mode === 'external' || sidecar.mode === 'url'
+        ? { mode: sidecar.mode, required: true, configured_url: sidecar.url }
+        : { mode: sidecar.mode, required: false, managed_on_first_agent_call: sidecar.managed },
     },
     tools: {
       count: tools.length,

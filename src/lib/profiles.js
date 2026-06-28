@@ -2,7 +2,7 @@ const DEFAULT_PROFILES = {
   admin: { allow: ['*'], write: true, exec: true, spawnDepth: 100 },
   full: { extends: 'admin' },
   readonly: {
-    allow: ['search.web', 'search.fetch', 'fs.glob', 'fs.grep', 'fs.list', 'file.read', 'memory.search', 'memory.recall', 'worker.status', 'validate.check'],
+    allow: ['search.web', 'search.fetch', 'fs.glob', 'fs.grep', 'fs.list', 'file.read', 'code.review', 'memory.search', 'memory.recall', 'worker.search', 'worker.analyze', 'worker.diff', 'worker.status', 'validate.check', 'validate.load'],
     write: false,
     exec: false,
     spawnDepth: 0,
@@ -16,15 +16,15 @@ const DEFAULT_PROFILES = {
   },
   orchestrator: {
     extends: 'developer',
-    allow: ['agent.spawn', 'agent.pipeline'],
+    allow: ['agent.spawn', 'agent.pipeline', 'audit.prepare', 'audit.ingest_report', 'audit.run', 'audit.collect'],
     write: true,
     exec: true,
     spawnDepth: 20,
   },
   subagent: {
-    extends: 'developer',
-    deny: ['agent.spawn', 'agent.pipeline'],
-    write: true,
+    extends: 'readonly',
+    deny: ['agent.spawn', 'agent.pipeline', 'audit.prepare', 'audit.ingest_report', 'audit.run', 'audit.collect', 'command.exec', 'file.write', 'file.copy', 'file.move', 'code.patch'],
+    write: false,
     exec: false,
     spawnDepth: 0,
   },

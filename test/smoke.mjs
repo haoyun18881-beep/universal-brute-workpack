@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
@@ -48,7 +48,7 @@ try {
 
   const list = await rpc('tools/list');
   const names = list.result.tools.map((item) => item.name);
-  for (const expected of ['search.web', 'fs.glob', 'file.write', 'command.exec', 'memory.search', 'memory.recall', 'agent.spawn', 'agent.pipeline']) {
+  for (const expected of ['search.web', 'fs.glob', 'file.write', 'command.exec', 'memory.search', 'memory.recall', 'worker.search', 'worker.analyze', 'worker.diff', 'audit.prepare', 'audit.ingest_report', 'audit.run', 'audit.collect', 'agent.spawn', 'agent.pipeline']) {
     assert(names.includes(expected), `${expected} should be visible in admin profile`);
   }
 
@@ -65,6 +65,58 @@ try {
   const memoryText = memory.result.content[0].text;
   assert(memoryText.includes('local_keyword_file_scan'));
   assert(memoryText.includes('memory needle'));
+
+  const workerSearch = await rpc('tools/call', { name: 'worker.search', arguments: { root, pattern: 'memory needle', maxResults: 5 } });
+  assert(!workerSearch.error, workerSearch.error?.message);
+  assert(workerSearch.result.content[0].text.includes('memory needle'));
+
+  const workerAnalyze = await rpc('tools/call', { name: 'worker.analyze', arguments: { root, maxFiles: 20 } });
+  assert(!workerAnalyze.error, workerAnalyze.error?.message);
+  assert(workerAnalyze.result.content[0].text.includes('"files"'));
+
+  const leftDir = join(root, 'left');
+  const rightDir = join(root, 'right');
+  mkdirSync(leftDir);
+  mkdirSync(rightDir);
+  writeFileSync(join(leftDir, 'same.txt'), 'same', 'utf-8');
+  writeFileSync(join(rightDir, 'same.txt'), 'same', 'utf-8');
+  writeFileSync(join(leftDir, 'changed.txt'), 'old', 'utf-8');
+  writeFileSync(join(rightDir, 'changed.txt'), 'new', 'utf-8');
+  const workerDiff = await rpc('tools/call', { name: 'worker.diff', arguments: { left: leftDir, right: rightDir, maxFiles: 20 } });
+  assert(!workerDiff.error, workerDiff.error?.message);
+  assert(workerDiff.result.content[0].text.includes('"changedCount": 1'));
+
+  const audit = await rpc('tools/call', {
+    name: 'audit.prepare',
+    arguments: {
+      runDir: join(root, 'audit-run'),
+      tasks: [{ title: 'Smoke audit', prompt: 'Return one compact finding if needed.' }],
+      maxFindingsPerTask: 1,
+    },
+  });
+  assert(!audit.error, audit.error?.message);
+  const auditText = JSON.parse(audit.result.content[0].text);
+  const ingest = await rpc('tools/call', {
+    name: 'audit.ingest_report',
+    arguments: {
+      runDir: auditText.runDir,
+      taskId: 'task-001',
+      output: JSON.stringify({
+        task_id: 'task-001',
+        status: 'completed',
+        findings: [],
+        read_status: 'complete',
+        evidence_paths_read: [],
+        evidence_paths_not_read: [],
+        not_inspected: [],
+        sensitive_scan_result: 'none-found',
+      }),
+    },
+  });
+  assert(!ingest.error, ingest.error?.message);
+  const collect = await rpc('tools/call', { name: 'audit.collect', arguments: { runDir: auditText.runDir } });
+  assert(!collect.error, collect.error?.message);
+  assert(collect.result.content[0].text.includes('evidence-bundle.json'));
 
   const exec = await rpc('tools/call', { name: 'command.exec', arguments: { command: 'node --version', cwd: repoRoot, timeoutMs: 10000 } });
   assert(!exec.error, exec.error?.message);

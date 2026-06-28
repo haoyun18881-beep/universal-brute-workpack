@@ -81,8 +81,16 @@ export function loadConfig(args = {}) {
     transport: 'stdio',
     roots: ['*'],
     sidecar: {
-      mode: process.env.UBW_SIDECAR_MODE || 'inprocess',
+      mode: process.env.UBW_SIDECAR_MODE || 'managed',
       url: process.env.UBW_SIDECAR_URL || '',
+      port: Number(process.env.UBW_SIDECAR_PORT || 0),
+      startupTimeoutMs: Number(process.env.UBW_SIDECAR_STARTUP_TIMEOUT_MS || 15000),
+    },
+    worker: {
+      enabled: process.env.UBW_WORKER_POOL_ENABLED === undefined ? true : process.env.UBW_WORKER_POOL_ENABLED !== '0',
+      poolSize: Number(process.env.UBW_WORKER_POOL_SIZE || 0),
+      minParallelFiles: Number(process.env.UBW_WORKER_MIN_PARALLEL_FILES || 1),
+      maxFileBytes: Number(process.env.UBW_WORKER_MAX_FILE_BYTES || 2000000),
     },
     memory: {
       url: process.env.UBW_MEMORY_URL || '',
@@ -103,8 +111,10 @@ export function loadConfig(args = {}) {
     },
     agent: {
       maxPipelineTasks: Number(process.env.UBW_AGENT_MAX_PIPELINE_TASKS || 100),
+      concurrency: Number(process.env.UBW_AGENT_CONCURRENCY || 20),
       staggerMs: Number(process.env.UBW_AGENT_STAGGER_MS || 0),
       taskTimeoutMs: Number(process.env.UBW_AGENT_TASK_TIMEOUT_MS || 300000),
+      taskHistoryLimit: Number(process.env.UBW_AGENT_TASK_HISTORY_LIMIT || 1000),
     },
     search: { timeoutMs: 15000, maxResults: 5 },
     limits: { maxOutputChars: 60000, maxFetchChars: 80000, commandTimeoutMs: 10000 },

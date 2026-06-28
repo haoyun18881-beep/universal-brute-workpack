@@ -13,7 +13,7 @@ function llmConfig(config = {}) {
   return {
     baseUrl: llm.baseUrl || envValue([llm.baseUrlEnv, 'LLM_BASE_URL', 'OPENAI_BASE_URL']),
     apiKey: llm.apiKey || envValue([llm.apiKeyEnv, 'LLM_API_KEY', 'OPENAI_API_KEY']),
-    model: llm.model || envValue([llm.modelEnv, 'LLM_MODEL', 'OPENAI_MODEL']) || 'gpt-4.1-mini',
+    model: llm.model || envValue([llm.modelEnv, 'LLM_MODEL', 'OPENAI_MODEL']),
     timeoutMs: Number(llm.timeoutMs || config.agent?.taskTimeoutMs || 300000),
     temperature: llm.temperature ?? config.agent?.temperature ?? 0.2,
   };
@@ -21,6 +21,21 @@ function llmConfig(config = {}) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function mapLimit(items, limit, handler) {
+  const results = new Array(items.length);
+  let next = 0;
+  const workerCount = Math.max(1, Math.min(limit, items.length || 1));
+  async function run() {
+    while (next < items.length) {
+      const index = next;
+      next += 1;
+      results[index] = await handler(items[index], index);
+    }
+  }
+  await Promise.all(Array.from({ length: workerCount }, run));
+  return results;
 }
 
 async function callOpenAiCompatible(task = {}, config = {}) {
@@ -37,7 +52,7 @@ async function callOpenAiCompatible(task = {}, config = {}) {
     method: 'POST',
     headers,
     body: JSON.stringify({
-      model,
+      ...(model ? { model } : {}),
       messages: [
         ...(task.system ? [{ role: 'system', content: String(task.system) }] : []),
         { role: 'user', content: String(task.prompt || task.input || '') },
@@ -47,11 +62,20 @@ async function callOpenAiCompatible(task = {}, config = {}) {
     signal: AbortSignal.timeout(Number(task.timeoutMs || llm.timeoutMs)),
   });
   const data = await res.json();
-  return { status: res.ok ? 'completed' : 'failed', model, response: data };
+  return { status: res.ok ? 'completed' : 'failed', model: model || data.model || '', response: data };
 }
 
 export function createAgentAdapter(config = {}) {
   const tasks = new Map();
+  const historyLimit = Math.max(10, Number(config.agent?.taskHistoryLimit || process.env.UBW_AGENT_TASK_HISTORY_LIMIT || 1000));
+
+  function trimHistory() {
+    while (tasks.size > historyLimit) {
+      const oldest = tasks.keys().next().value;
+      if (!oldest) break;
+      tasks.delete(oldest);
+    }
+  }
 
   async function spawn(task = {}) {
     const id = randomUUID();
@@ -62,6 +86,7 @@ export function createAgentAdapter(config = {}) {
       input: { prompt: task.prompt, model: task.model },
     };
     tasks.set(id, record);
+    trimHistory();
     try {
       const result = await callOpenAiCompatible(task, config);
       Object.assign(record, { status: result.status, finished_at: new Date().toISOString(), result });
@@ -72,23 +97,25 @@ export function createAgentAdapter(config = {}) {
   }
 
   async function pipeline(input = {}) {
-    const results = [];
     const tasksInput = Array.isArray(input.tasks) ? input.tasks : [];
     const maxTasks = Number(input.maxTasks || config.agent?.maxPipelineTasks || 100);
     const staggerMs = Number(input.staggerMs ?? config.agent?.staggerMs ?? 0);
+    const concurrency = Math.max(1, Math.min(
+      Number(input.concurrency || config.agent?.concurrency || 20),
+      Math.max(1, maxTasks),
+    ));
     if (tasksInput.length > maxTasks) {
       return { id: randomUUID(), status: 'rejected', reason: `task_count ${tasksInput.length} exceeds maxPipelineTasks ${maxTasks}`, task_count: tasksInput.length, maxTasks };
     }
-    for (let i = 0; i < tasksInput.length; i += 1) {
-      if (i > 0 && staggerMs > 0) await sleep(staggerMs);
-      const task = tasksInput[i];
-      results.push(await spawn({ ...task, model: task.model || input.model }));
-    }
-    return { id: randomUUID(), status: 'completed', task_count: results.length, maxTasks, staggerMs, results };
+    const results = await mapLimit(tasksInput, concurrency, async (task, index) => {
+      if (index > 0 && staggerMs > 0) await sleep(index * staggerMs);
+      return await spawn({ ...task, model: task.model || input.model });
+    });
+    return { id: randomUUID(), status: 'completed', task_count: results.length, maxTasks, concurrency, staggerMs, results };
   }
 
   function status() {
-    return { status: 'ok', service: 'universal-brute-workpack-agent-adapter', tasks: tasks.size };
+    return { status: 'ok', service: 'universal-brute-workpack-agent-adapter', tasks: tasks.size, historyLimit };
   }
 
   return { spawn, pipeline, status, tasks };

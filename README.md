@@ -9,7 +9,7 @@ Universal Brute Workpack is a full-capability, stdio-first Agent MCP workpack.
 
 It is meant to be usable by Codex, OpenClaw, Claude Desktop, Cursor, Cline, Continue, or any other MCP client that can speak SSE or stdio.
 
-It turns an Agent client into a local-first workbench: files, grep, patching, commands, web search fallback, memory recall fallback, and model-backed Agent tasks behind one MCP server.
+It turns an Agent client into a local-first workbench: files, CPU-parallel grep, rollback-aware patching, commands, web search fallback, memory recall fallback, and model-backed Agent tasks behind one MCP server.
 
 ## Why It Exists
 
@@ -18,9 +18,10 @@ Most Agent clients are strongest when they judge, decide, and close the loop. Th
 Universal Brute Workpack is designed to move that bulk work out of the main Agent thread:
 
 - Local tools do zero-token work on the user's machine.
+- The worker pool uses the user's available CPU parallelism by default, so big machines are allowed to be fast.
 - Cheap API models can handle wide exploratory batches.
 - Expensive/pro subscription Agents can stay focused on planning, review, and final decisions.
-- Future host-mediated pipelines can let subscription Agents such as Codex Pro or other Agent IDEs act as the control plane for their own native subagents or threads.
+- Host-mediated audit flows can let subscription Agents such as Codex Pro or other Agent IDEs act as the control plane for their own native subagents or threads.
 
 The goal is not to replace the main Agent. The goal is to make one strong Agent feel like a coordinated workbench.
 
@@ -38,27 +39,33 @@ The goal is not to replace the main Agent. The goal is to make one strong Agent 
 
 | Option | Good At | Missing Compared With UBW |
 | --- | --- | --- |
-| Filesystem MCP | File read/write | No web search, command execution, memory fallback, or Agent pipeline. |
+| Filesystem MCP | File read/write | No web search, command execution, memory fallback, Agent pipeline, CPU worker pool, or patch rollback. |
 | Context7 | Documentation lookup | Not a general local workbench; no file/code/command pipeline. |
 | Playwright MCP | Browser automation | Not a local file/search/code/Agent workpack. |
-| Exa/Tavily MCP | Web search | Usually key-first and search-only; no local fallback bundle. |
+| Exa/Tavily MCP | Web search | Usually key-first and search-only; no local fallback bundle when quota or keys fail. |
 | Bare Agent client | Reasoning and editing | Bulk searches, repetitive audits, and multi-pass evidence collection consume main-thread time/limits. |
-| Universal Brute Workpack | Local workbench + graceful degradation + Agent pipeline direction | Not a browser-only or search-only tool; 100-way portable orchestration is the next target, not claimed as fully shipped in v0.1.0. |
+| Universal Brute Workpack | Local workbench + graceful degradation + worker pool + managed Agent sidecar + audit runDir collector | Browser automation and local vector adapters are optional future/provider layers, not the core package. |
 
 ## Capability Model
 
 Available now:
 
 - Full-capability MCP tool bundle with stdio and SSE transports.
-- 18 neutral tools for search, fetch, file operations, code patching, commands, validation, memory search/recall, status, and Agent spawn/pipeline.
+- 27 neutral tools for search, fetch, file operations, code patching/review, commands, validation, memory search/recall, worker search/analyze/diff, audit chain, status, and Agent spawn/pipeline.
+- CPU-parallel `fs.grep` through a local worker pool. By default it uses available machine parallelism; set `UBW_WORKER_POOL_SIZE` only when you want to limit it.
+- `code.patch` uses exact replacements and rolls back JS-like files when `node --check` fails.
+- Managed sidecar mode for `agent.spawn` and `agent.pipeline`; users do not need to start a second terminal for the sidecar.
+- Concurrent API-backed `agent.pipeline` with configurable task cap, concurrency, stagger timing, and timeout.
+- TaskCard/runDir/collector/EvidenceBundle audit chain through `audit.prepare`, `audit.ingest_report`, `audit.run`, and `audit.collect`.
 - Zero-key first run: DuckDuckGo fallback for web search and local text/JSON/Markdown/log fallback for memory search.
 - Configurable profiles, deny lists, filesystem roots, provider keys, memory backends, LLM endpoints, pipeline task limits, and stagger timing.
-- OpenAI-compatible API mode for `agent.spawn` and `agent.pipeline`.
+- OpenAI-compatible API mode for `agent.spawn` and `agent.pipeline`; if no model backend is configured, Agent tools return `not_configured` instead of killing the MCP process.
 
-Proven pattern / next target:
+Proven pattern / current portable base:
 
 - OpenClaw has already demonstrated 100-way prompt-contained pre-audit as an external orchestration pattern.
-- Universal Brute Workpack is being shaped to make that pattern portable: TaskCards, run directories, collector contracts, EvidenceBundles, failure thresholds, and main-Agent review gates.
+- Universal Brute Workpack now ships the portable base for that pattern: local worker pool, managed sidecar, concurrent pipeline controls, TaskCards, run directories, collector contracts, EvidenceBundles, failure thresholds, and main-Agent review gates.
+- Host-mediated mode lets Codex/Cursor/Cline/other Agent hosts create native subagents while UBW owns prompts, report ingestion, collection, and gate artifacts.
 - The high-value path is a two-layer audit loop: broad low-cost candidate discovery, then focused high-quality review by a smaller number of stronger Agents.
 
 ## Quick Start
@@ -86,6 +93,8 @@ args = ["-y", "universal-brute-workpack", "serve", "--stdio"]
 
 No API key is required for first run. File tools, command execution, validation, DuckDuckGo fallback search, and local keyword memory search work out of the box.
 
+If Tavily or Exa is not configured, exhausted, or unavailable, `search.web` falls back instead of crashing. If no memory/vector service is configured, `memory.search` falls back to local text search. If no LLM endpoint is configured, `agent.spawn` and `agent.pipeline` report `not_configured` while every local tool continues working.
+
 ## Example Use Cases
 
 After connecting the MCP server, call tools from your Agent client:
@@ -103,12 +112,35 @@ maxResults: 50
 ```
 
 ```text
+worker.diff
+left: "src"
+right: "backup/src"
+maxFiles: 10000
+```
+
+```text
+code.review
+path: "src"
+maxFiles: 200
+maxFindings: 30
+```
+
+```text
 agent.pipeline
 tasks:
   - prompt: "Review src/tools/core.js for command execution risks."
   - prompt: "Review src/lib/profiles.js for profile bypass risks."
 model: "cheap-review-model"
+concurrency: 20
 staggerMs: 50
+```
+
+```text
+audit.prepare
+tasks:
+  - title: "Review tool permissions"
+    prompt: "Find profile bypasses and report compact JSON findings."
+maxFindingsPerTask: 3
 ```
 
 If no LLM endpoint is configured, Agent tasks return `not_configured` instead of crashing. Local tools still work.
@@ -121,15 +153,24 @@ If no LLM endpoint is configured, Agent tasks return `not_configured` instead of
 | `UBW_PROFILES` | package example profiles | Path to a custom profile/deny JSON. |
 | `UBW_PROFILE` | `admin` | Active profile. |
 | `UBW_ROOTS` | `*` | Allowed filesystem roots, separated by `;`. |
+| `UBW_WORKER_POOL_ENABLED` | `1` | Enable CPU worker pool for local bulk work. |
+| `UBW_WORKER_POOL_SIZE` | available CPU parallelism | Override worker pool size; empty means auto. |
+| `UBW_WORKER_MIN_PARALLEL_FILES` | `1` | Minimum candidate files before parallel grep. |
+| `UBW_WORKER_MAX_FILE_BYTES` | `2000000` | Per-file worker scan cap. |
 | `TAVILY_API_KEY` | empty | Optional Tavily web search key. |
 | `EXA_API_KEY` | empty | Optional Exa web search key. |
 | `UBW_MEMORY_URL` | empty | Optional external memory/vector service endpoint. |
 | `LLM_BASE_URL` | empty | Optional OpenAI-compatible base URL for Agent tasks. |
 | `LLM_API_KEY` | empty | Optional model API key. |
 | `LLM_MODEL` | provider default | Optional model name. |
+| `UBW_SIDECAR_MODE` | `managed` | `managed`, `inprocess`, or `external`. |
+| `UBW_SIDECAR_URL` | empty | External sidecar URL when using external mode. |
+| `UBW_SIDECAR_PORT` | `0` | Managed sidecar port; `0` means auto-pick. |
 | `UBW_AGENT_MAX_PIPELINE_TASKS` | `100` | Pipeline task cap. |
+| `UBW_AGENT_CONCURRENCY` | `20` | Concurrent Agent tasks inside pipeline. |
 | `UBW_AGENT_STAGGER_MS` | `0` | Delay between pipeline tasks. |
 | `UBW_AGENT_TASK_TIMEOUT_MS` | `300000` | Agent task timeout. |
+| `UBW_AGENT_TASK_HISTORY_LIMIT` | `1000` | Managed sidecar task record cap. |
 
 ## Defaults
 
@@ -138,7 +179,7 @@ If no LLM endpoint is configured, Agent tasks return `not_configured` instead of
 - Narrow profiles and per-profile `deny` lists exist only as optional compatibility knobs for clients that want them.
 - Provider keys, memory/vector service URLs, model endpoints, pipeline limits, and stagger timing are configured through `config/universal-brute-workpack.example.json`, `.env`, or your MCP client environment.
 - `memory.search` / `memory.recall` prefer a configured memory service, then fall back to local text/JSON/Markdown/log search instead of failing.
-- `agent.spawn` / `agent.pipeline` run through the built-in OpenAI-compatible adapter by default. Set `LLM_BASE_URL`, optional `LLM_API_KEY`, and `LLM_MODEL` for real model calls.
+- `agent.spawn` / `agent.pipeline` use the managed sidecar by default. Set `LLM_BASE_URL`, optional `LLM_API_KEY`, and `LLM_MODEL` for real model calls.
 
 ## Start
 
@@ -169,9 +210,10 @@ Agent Client
   └─ MCP stdio/SSE
       └─ Universal Brute Workpack bridge
           ├─ local tools: fs/search/file/code/command/validate
+          ├─ CPU worker pool: parallel grep and local bulk scans
           ├─ fallback tools: DuckDuckGo, local memory keyword scan
-          ├─ in-process Agent adapter: OpenAI-compatible API
-          └─ optional sidecar / future host-mediated pipeline
+          ├─ managed sidecar: isolated Agent spawn/pipeline process
+          └─ audit layer: TaskCards, reports, collector, EvidenceBundles, gate
 ```
 
 ## Tools
@@ -204,11 +246,15 @@ Personal, academic, research, and small non-commercial use are free under the in
 
 **Is 100-way Agent orchestration already shipped?**
 
-Not fully in v0.1.0. OpenClaw has demonstrated the 100-way pre-audit pattern. UBW v0.1.0 ships the portable MCP workpack foundation and API pipeline; portable 100-way orchestration with collector contracts and host-mediated pipelines is the next target.
+The portable base is shipped in v0.1.1: worker pool, managed sidecar, concurrent API pipeline, TaskCards, runDir, report ingestion, collector summary, EvidenceBundle, and gate file. OpenClaw has demonstrated the 100-way pre-audit pattern in a larger system; UBW provides the generic MCP package foundation for that style of workflow.
+
+**What happens when keys or quotas are missing?**
+
+The workpack degrades instead of dying: Tavily/Exa can fall back to DuckDuckGo, external memory can fall back to local keyword search, and Agent tools return `not_configured` without breaking file/search/command tools.
 
 **Can this use Codex Pro or another subscription Agent as workers?**
 
-Not directly by taking a hidden API key. The planned host-mediated mode lets the host Agent use its own native subagents, threads, or tools while UBW manages task cards, run directories, collector contracts, and evidence bundles.
+Not directly by taking a hidden API key. The host-mediated audit flow lets the host Agent use its own native subagents, threads, or tools while UBW manages task cards, run directories, report ingestion, collector contracts, and evidence bundles.
 
 ## Contributing
 

@@ -15,7 +15,11 @@
     "extends": "developer",
     "allow": [
       "agent.spawn",
-      "agent.pipeline"
+      "agent.pipeline",
+      "audit.prepare",
+      "audit.ingest_report",
+      "audit.run",
+      "audit.collect"
     ],
     "deny": [],
     "write": true,
@@ -45,10 +49,15 @@
       "fs.grep",
       "fs.list",
       "file.read",
+      "code.review",
       "memory.search",
       "memory.recall",
+      "worker.search",
+      "worker.analyze",
+      "worker.diff",
       "worker.status",
-      "validate.check"
+      "validate.check",
+      "validate.load"
     ],
     "deny": [],
     "write": false,
@@ -56,11 +65,22 @@
     "spawnDepth": 0
   },
   "subagent": {
-    "extends": "developer",
+    "extends": "readonly",
     "deny": [
       "agent.spawn",
-      "agent.pipeline"
+      "agent.pipeline",
+      "audit.prepare",
+      "audit.ingest_report",
+      "audit.run",
+      "audit.collect",
+      "command.exec",
+      "file.write",
+      "file.copy",
+      "file.move",
+      "code.patch"
     ],
+    "write": false,
+    "exec": false,
     "spawnDepth": 0
   },
   "admin_no_shell": {

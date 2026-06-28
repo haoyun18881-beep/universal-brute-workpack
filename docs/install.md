@@ -34,9 +34,26 @@ Pipeline controls are config-driven:
 
 ```text
 UBW_AGENT_MAX_PIPELINE_TASKS=100
+UBW_AGENT_CONCURRENCY=20
 UBW_AGENT_STAGGER_MS=0
 UBW_AGENT_TASK_TIMEOUT_MS=300000
 ```
+
+## First-Run Verify
+
+```bash
+npx -y universal-brute-workpack doctor
+```
+
+Healthy first run should show:
+
+- `version: "0.1.1"`
+- `tools.count: 27`
+- `profile: "admin"` unless you selected another profile
+- `worker_pool.enabled: true`
+- `sidecar.mode: "managed"`
+
+It is normal for `llm_base_url` to be false before you configure a model endpoint. In that state, local tools work and Agent tools return `not_configured` instead of crashing.
 
 ## License
 

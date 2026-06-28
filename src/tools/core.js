@@ -12,7 +12,10 @@ import {
 import { dirname, extname, join, relative } from 'path';
 import { execFileSync, execSync } from 'child_process';
 import { resolveInside } from '../lib/path-guard.js';
-import { truncate } from '../lib/redact.js';
+import { redact, truncate } from '../lib/redact.js';
+import { analyzeFiles, grepFiles, hashFiles, workerPoolSettings } from '../lib/local-worker-pool.js';
+import { getSidecarUrl, managedSidecarStatus, sidecarSettings } from '../lib/sidecar-manager.js';
+import { collectAuditRun, createAuditRun, ingestAuditReport, writePipelineResults } from '../lib/audit-chain.js';
 
 const TEXT_EXTENSIONS = new Set([
   '.cjs',
@@ -127,27 +130,40 @@ async function searchWeb(args, context) {
   const ddgProvider = providers.duckduckgo || {};
   const exaKey = configuredSecret(exaProvider, ['EXA_API_KEY']);
   const tavilyKey = configuredSecret(tavilyProvider, ['TAVILY_API_KEY', 'TAVILY_API_KEYS']);
+  const warnings = [];
 
   if (backends.includes('exa') && exaKey) {
-    const res = await fetch(configuredValue(exaProvider, ['endpoint'], [], 'https://api.exa.ai/search'), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': exaKey },
-      body: JSON.stringify({ query, numResults: maxResults }),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    return textResult({ backend: 'exa', status: res.status, data: await res.json() }, context);
+    try {
+      const res = await fetch(configuredValue(exaProvider, ['endpoint'], [], 'https://api.exa.ai/search'), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': exaKey },
+        body: JSON.stringify({ query, numResults: maxResults }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (res.ok) return textResult({ backend: 'exa', status: res.status, data: await res.json() }, context);
+      warnings.push(`exa returned HTTP ${res.status}`);
+    } catch (error) {
+      warnings.push(`exa failed: ${error.message}`);
+    }
   }
 
   if (backends.includes('tavily') && tavilyKey) {
-    const key = tavilyKey.includes(',') ? tavilyKey.split(',')[0] : tavilyKey;
-    const res = await fetch(configuredValue(tavilyProvider, ['endpoint'], [], 'https://api.tavily.com/search'), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ api_key: key, query, max_results: maxResults }),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    const data = await res.json();
-    return textResult({ backend: 'tavily', results: data.results || [] }, context);
+    try {
+      const key = tavilyKey.includes(',') ? tavilyKey.split(',')[0] : tavilyKey;
+      const res = await fetch(configuredValue(tavilyProvider, ['endpoint'], [], 'https://api.tavily.com/search'), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ api_key: key, query, max_results: maxResults }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return textResult({ backend: 'tavily', results: data.results || [] }, context);
+      }
+      warnings.push(`tavily returned HTTP ${res.status}`);
+    } catch (error) {
+      warnings.push(`tavily failed: ${error.message}`);
+    }
   }
 
   if (!backends.includes('duckduckgo')) {
@@ -158,6 +174,7 @@ async function searchWeb(args, context) {
   const data = await (await fetch(url, { signal: AbortSignal.timeout(timeoutMs) })).json();
   return textResult({
     backend: 'duckduckgo_instant_answer',
+    degraded_from: warnings,
     heading: data.Heading,
     abstract: data.AbstractText,
     related: (data.RelatedTopics || []).slice(0, maxResults),
@@ -166,6 +183,30 @@ async function searchWeb(args, context) {
 
 function runNodeCheck(path) {
   execFileSync('node', ['--check', path], { encoding: 'utf-8' });
+}
+
+function summarizeNodeModule(path) {
+  runNodeCheck(path);
+  const text = readFileSync(path, 'utf-8');
+  const exportNames = new Set();
+  for (const match of text.matchAll(/\bexport\s+(?:async\s+)?(?:function|class|const|let|var)\s+([A-Za-z_$][\w$]*)/g)) {
+    exportNames.add(match[1]);
+  }
+  for (const match of text.matchAll(/\bexport\s*\{([^}]+)\}/g)) {
+    for (const name of match[1].split(',')) {
+      const cleaned = name.trim().split(/\s+as\s+/i).pop()?.trim();
+      if (cleaned && /^[A-Za-z_$][\w$]*$/.test(cleaned)) exportNames.add(cleaned);
+    }
+  }
+  for (const match of text.matchAll(/\bexports\.([A-Za-z_$][\w$]*)\s*=/g)) {
+    exportNames.add(match[1]);
+  }
+  return {
+    ok: true,
+    executed: false,
+    exportNames: [...exportNames].slice(0, 100),
+    defaultExportMentioned: /\bexport\s+default\b|\bmodule\.exports\s*=/.test(text),
+  };
 }
 
 function isTextSearchFile(file, maxBytes) {
@@ -185,6 +226,13 @@ function queryTerms(query) {
     .split(/[^\p{L}\p{N}_-]+/u)
     .map((term) => term.trim())
     .filter((term) => term.length >= 2))];
+}
+
+function finiteNumber(value, fallback, { min = -Infinity, max = Infinity, integer = false } = {}) {
+  const parsed = Number(value);
+  const base = Number.isFinite(parsed) ? parsed : fallback;
+  const clamped = Math.max(min, Math.min(base, max));
+  return integer ? Math.floor(clamped) : clamped;
 }
 
 function lineScore(lineLower, queryLower, terms) {
@@ -220,6 +268,67 @@ function searchTextFile(file, queryLower, terms) {
     }
   }
   return best;
+}
+
+function reviewLine(line, file, lineNumber) {
+  const checks = [
+    { pattern: /\beval\s*\(|new Function\s*\(/, severity: 'high', category: 'dynamic_code_execution', claim: 'Dynamic code execution needs explicit justification and input control.' },
+    { pattern: /\bexecSync\s*\(|\bexec\s*\(|shell\s*:\s*true/, severity: 'medium', category: 'shell_execution', claim: 'Shell execution should validate inputs, cwd, timeout, and output handling.' },
+    { pattern: /\b(rmSync|unlinkSync|rmdirSync)\s*\(/, severity: 'medium', category: 'destructive_filesystem', claim: 'Destructive filesystem operations should have tight path boundaries and clear caller intent.' },
+    { pattern: /\bwriteFileSync\s*\(|\brenameSync\s*\(|\bcpSync\s*\(/, severity: 'low', category: 'filesystem_write', claim: 'Filesystem writes should stay inside configured roots and return useful evidence.' },
+    { pattern: /(api[_-]?key|token|cookie|password|secret|authorization|bearer)/i, severity: 'medium', category: 'sensitive_data', claim: 'Sensitive data handling should redact values and avoid echoing secrets.' },
+    { pattern: /\bTODO\b|\bFIXME\b/i, severity: 'info', category: 'maintenance_note', claim: 'Maintenance marker found.' },
+  ];
+  const findings = [];
+  for (const check of checks) {
+    if (!check.pattern.test(line)) continue;
+    findings.push({
+      severity: check.severity,
+      category: check.category,
+      claim: check.claim,
+      file,
+      line: lineNumber,
+      snippet: redact(line.trim().slice(0, 300)),
+      confidence: check.severity === 'info' ? 0.55 : 0.72,
+      needs_main_review: true,
+    });
+  }
+  return findings;
+}
+
+function reviewFile(file, maxFindings) {
+  let text = '';
+  try {
+    text = readFileSync(file, 'utf-8');
+  } catch {
+    return { scanned: false, findings: [] };
+  }
+  if (text.includes('\0')) return { scanned: false, findings: [] };
+  const findings = [];
+  const lines = text.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i += 1) {
+    findings.push(...reviewLine(lines[i], file, i + 1));
+    if (findings.length >= maxFindings) break;
+  }
+  return { scanned: true, findings };
+}
+
+async function callSidecar(endpoint, args, context, timeoutMs = 120000) {
+  const settings = sidecarSettings(context.config);
+  if (context.agentAdapter && settings.mode === 'inprocess') {
+    return endpoint === 'pipeline'
+      ? await context.agentAdapter.pipeline(args)
+      : await context.agentAdapter.spawn(args);
+  }
+  const url = await getSidecarUrl(context.config);
+  if (!url) return { ok: false, status: 'not_configured' };
+  const res = await fetch(`${url}/${endpoint}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(args),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  return await res.json();
 }
 
 function localMemorySearch(args, context, warnings = []) {
@@ -303,8 +412,8 @@ async function memorySearch(args, context) {
 
 function normalizePipelineArgs(args, context) {
   const tasks = Array.isArray(args.tasks) ? args.tasks : [];
-  const configuredMax = Number(args.maxTasks || context.config.agent?.maxPipelineTasks || 100);
-  const profileMax = Number(context.profile?.spawnDepth || configuredMax);
+  const configuredMax = finiteNumber(args.maxTasks ?? context.config.agent?.maxPipelineTasks ?? 100, 100, { min: 0, integer: true });
+  const profileMax = finiteNumber(context.profile?.spawnDepth ?? configuredMax, configuredMax, { min: 0, integer: true });
   const maxTasks = Math.max(0, Math.min(configuredMax, profileMax));
   if (tasks.length > maxTasks) {
     return {
@@ -317,7 +426,8 @@ function normalizePipelineArgs(args, context) {
   return {
     ...args,
     maxTasks,
-    staggerMs: Number(args.staggerMs ?? context.config.agent?.staggerMs ?? 0),
+    concurrency: finiteNumber(args.concurrency ?? context.config.agent?.concurrency ?? 20, 20, { min: 1, max: Math.max(1, maxTasks), integer: true }),
+    staggerMs: finiteNumber(args.staggerMs ?? context.config.agent?.staggerMs ?? 0, 0, { min: 0, integer: true }),
   };
 }
 
@@ -341,27 +451,26 @@ export function buildTools(context) {
         .slice(0, maxResults);
       return textResult({ root, pattern, files }, context);
     }),
-    tool('fs.grep', 'Search file contents under a root.', { root: { type: 'string' }, pattern: { type: 'string' }, maxResults: { type: 'number' } }, async (args) => {
+    tool('fs.grep', 'Search file contents under a root using the local worker pool for large trees.', { root: { type: 'string' }, pattern: { type: 'string' }, maxResults: { type: 'number' }, maxFiles: { type: 'number' } }, async (args) => {
       const root = resolveInside(args.root || context.cwd, context, { mustExist: true });
       const pattern = String(args.pattern || '');
       if (!pattern) throw new Error('pattern is required');
-      const results = [];
       const maxResults = Number(args.maxResults || 100);
-      for (const file of walk(root, 10000)) {
-        if (statSync(file).size > 2_000_000) continue;
-        let text = '';
-        try {
-          text = readFileSync(file, 'utf-8');
-        } catch {
-          continue;
-        }
-        const lines = text.split(/\r?\n/);
-        for (let i = 0; i < lines.length; i += 1) {
-          if (lines[i].includes(pattern)) results.push({ file, line: i + 1, text: lines[i].slice(0, 300) });
-          if (results.length >= maxResults) return textResult({ root, pattern, results }, context);
-        }
-      }
-      return textResult({ root, pattern, results }, context);
+      const maxFiles = Number(args.maxFiles || 10000);
+      const files = walk(root, maxFiles);
+      const result = await grepFiles(files, pattern, { config: context.config, maxResults });
+      return textResult({
+        root,
+        pattern,
+        candidateFiles: files.length,
+        mode: result.mode,
+        workerCount: result.workerCount,
+        scannedFiles: result.scannedFiles,
+        skippedLarge: result.skippedLarge,
+        readErrors: result.readErrors,
+        workerErrors: result.workerErrors || 0,
+        results: result.results,
+      }, context);
     }),
     tool('fs.list', 'List a directory.', { path: { type: 'string' } }, async (args) => {
       const dir = resolveInside(args.path || context.cwd, context, { mustExist: true });
@@ -413,6 +522,31 @@ export function buildTools(context) {
       }
       return textResult({ ok: true, path, replacements: count }, context);
     }),
+    tool('code.review', 'Run a structured heuristic code review over a file or directory.', { path: { type: 'string' }, maxFiles: { type: 'number' }, maxFindings: { type: 'number' } }, async (args) => {
+      const target = resolveInside(args.path || context.cwd, context, { mustExist: true });
+      const maxFiles = Math.max(1, Math.min(Number(args.maxFiles || 200), 2000));
+      const maxFindings = Math.max(1, Math.min(Number(args.maxFindings || 30), 200));
+      const files = statSync(target).isDirectory() ? walk(target, maxFiles) : [target];
+      const findings = [];
+      let scannedFiles = 0;
+      for (const file of files) {
+        if (!isTextSearchFile(file, context.config.worker?.maxFileBytes || 2_000_000)) continue;
+        const result = reviewFile(file, Math.max(1, maxFindings - findings.length));
+        if (result.scanned) scannedFiles += 1;
+        findings.push(...result.findings);
+        if (findings.length >= maxFindings) break;
+      }
+      return textResult({
+        ok: true,
+        target,
+        scannedFiles,
+        candidateFiles: files.length,
+        maxFindings,
+        review_kind: 'heuristic_static_review',
+        needs_main_review: true,
+        findings,
+      }, context);
+    }),
     tool('command.exec', 'Execute a local shell command.', { command: { type: 'string' }, cwd: { type: 'string' }, timeoutMs: { type: 'number' } }, async (args) => {
       const cwd = resolveInside(args.cwd || context.cwd, context, { mustExist: true });
       const stdout = execSync(String(args.command || ''), {
@@ -430,6 +564,24 @@ export function buildTools(context) {
       else if (!existsSync(path)) throw new Error('path does not exist');
       return textResult({ ok: true, path }, context);
     }),
+    tool('validate.load', 'Load JSON or JS modules and return a structured summary.', { path: { type: 'string' } }, async (args) => {
+      const path = resolveInside(args.path, context, { mustExist: true });
+      const ext = extname(path).toLowerCase();
+      if (ext === '.json') {
+        const parsed = JSON.parse(readFileSync(path, 'utf-8'));
+        return textResult({
+          ok: true,
+          path,
+          kind: 'json',
+          topLevelType: Array.isArray(parsed) ? 'array' : typeof parsed,
+          keys: parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? Object.keys(parsed).slice(0, 100) : [],
+        }, context);
+      }
+      if (['.js', '.mjs', '.cjs'].includes(ext)) {
+        return textResult({ path, kind: 'node_module_static_summary', ...summarizeNodeModule(path) }, context);
+      }
+      return textResult({ ok: true, path, kind: 'file', size: statSync(path).size }, context);
+    }),
     tool('validate.diff', 'Return git diff for a cwd/path when git is available.', { cwd: { type: 'string' }, path: { type: 'string' } }, async (args) => {
       const cwd = resolveInside(args.cwd || context.cwd, context, { mustExist: true });
       const gitArgs = ['diff', '--'];
@@ -444,26 +596,170 @@ export function buildTools(context) {
     }),
     tool('memory.search', 'Search memory through an external service, then local text files as fallback.', { query: { type: 'string' }, backend: { type: 'string' }, root: { type: 'string' }, topK: { type: 'number' }, maxFiles: { type: 'number' } }, async (args) => memorySearch(args, context)),
     tool('memory.recall', 'Alias of memory.search for Agent clients that use recall wording.', { query: { type: 'string' }, backend: { type: 'string' }, root: { type: 'string' }, topK: { type: 'number' }, maxFiles: { type: 'number' } }, async (args) => memorySearch(args, context)),
-    tool('worker.status', 'Return local workpack status.', {}, async () => textResult({ ok: true, pid: process.pid, uptime: process.uptime(), profile: context.profile.name, roots: context.roots }, context)),
-    tool('agent.spawn', 'Spawn one external agent through the configured sidecar adapter.', { prompt: { type: 'string' }, model: { type: 'string' }, system: { type: 'string' } }, async (args) => {
-      if (context.agentAdapter && (context.config.sidecar?.mode || 'inprocess') === 'inprocess') {
-        return textResult(await context.agentAdapter.spawn(args), context);
-      }
-      const url = context.config.sidecar?.url || process.env.UBW_SIDECAR_URL;
-      if (!url) return textResult({ ok: false, status: 'not_configured' }, context);
-      const res = await fetch(`${url.replace(/\/$/, '')}/spawn`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(args), signal: AbortSignal.timeout(120000) });
-      return textResult(await res.json(), context);
+    tool('worker.search', 'Explicit worker-pool file content search; fs.grep uses the same engine.', { root: { type: 'string' }, pattern: { type: 'string' }, maxResults: { type: 'number' }, maxFiles: { type: 'number' } }, async (args) => {
+      const root = resolveInside(args.root || context.cwd, context, { mustExist: true });
+      const pattern = String(args.pattern || '');
+      if (!pattern) throw new Error('pattern is required');
+      const maxResults = Number(args.maxResults || 100);
+      const maxFiles = Number(args.maxFiles || 10000);
+      const files = walk(root, maxFiles);
+      const result = await grepFiles(files, pattern, { config: context.config, maxResults });
+      return textResult({ root, pattern, candidateFiles: files.length, ...result }, context);
     }),
-    tool('agent.pipeline', 'Run an external multi-agent pipeline through the configured sidecar adapter.', { tasks: { type: 'array' }, model: { type: 'string' }, maxTasks: { type: 'number' }, staggerMs: { type: 'number' } }, async (args) => {
+    tool('worker.analyze', 'Analyze files in parallel for size, extension, line, TODO, and FIXME summaries.', { root: { type: 'string' }, maxFiles: { type: 'number' } }, async (args) => {
+      const root = resolveInside(args.root || context.cwd, context, { mustExist: true });
+      const maxFiles = Number(args.maxFiles || 10000);
+      const files = statSync(root).isDirectory() ? walk(root, maxFiles) : [root];
+      const result = await analyzeFiles(files, { config: context.config });
+      return textResult({ root, candidateFiles: files.length, ...result }, context);
+    }),
+    tool('worker.diff', 'Parallel file or directory diff by sha256, size, and existence.', { left: { type: 'string' }, right: { type: 'string' }, maxFiles: { type: 'number' } }, async (args) => {
+      const left = resolveInside(args.left, context, { mustExist: true });
+      const right = resolveInside(args.right, context, { mustExist: true });
+      const maxFiles = Number(args.maxFiles || 10000);
+      const leftFiles = statSync(left).isDirectory() ? walk(left, maxFiles) : [left];
+      const rightFiles = statSync(right).isDirectory() ? walk(right, maxFiles) : [right];
+      const [leftHashes, rightHashes] = await Promise.all([
+        hashFiles(leftFiles, { config: context.config }),
+        hashFiles(rightFiles, { config: context.config }),
+      ]);
+      const leftMap = new Map(leftHashes.results.map((item) => [statSync(left).isDirectory() ? relative(left, item.file).replaceAll('\\', '/') : '', item]));
+      const rightMap = new Map(rightHashes.results.map((item) => [statSync(right).isDirectory() ? relative(right, item.file).replaceAll('\\', '/') : '', item]));
+      const allKeys = [...new Set([...leftMap.keys(), ...rightMap.keys()])].sort();
+      const changed = [];
+      const onlyLeft = [];
+      const onlyRight = [];
+      const same = [];
+      for (const key of allKeys) {
+        const l = leftMap.get(key);
+        const r = rightMap.get(key);
+        if (!l) onlyRight.push({ path: key, right: r.file, size: r.size });
+        else if (!r) onlyLeft.push({ path: key, left: l.file, size: l.size });
+        else if (l.sha256 !== r.sha256 || l.size !== r.size) changed.push({ path: key, left: l.file, right: r.file, leftSize: l.size, rightSize: r.size });
+        else same.push({ path: key, size: l.size });
+      }
+      return textResult({
+        left,
+        right,
+        mode: leftHashes.mode === 'worker_pool' || rightHashes.mode === 'worker_pool' ? 'worker_pool' : 'single_thread',
+        workerCount: Math.max(leftHashes.workerCount || 1, rightHashes.workerCount || 1),
+        leftFiles: leftHashes.results.length,
+        rightFiles: rightHashes.results.length,
+        sameCount: same.length,
+        changedCount: changed.length,
+        onlyLeftCount: onlyLeft.length,
+        onlyRightCount: onlyRight.length,
+        readErrors: (leftHashes.readErrors || 0) + (rightHashes.readErrors || 0),
+        changed: changed.slice(0, 200),
+        onlyLeft: onlyLeft.slice(0, 200),
+        onlyRight: onlyRight.slice(0, 200),
+      }, context);
+    }),
+    tool('audit.prepare', 'Prepare a host-mediated audit runDir with TaskCards, prompts, manifest, and report dropbox.', {
+      tasks: { type: 'array' },
+      runDir: { type: 'string' },
+      model: { type: 'string' },
+      maxFindingsPerTask: { type: 'number' },
+      failureThreshold: { type: 'number' },
+      dispatchMode: { type: 'string' },
+    }, async (args) => {
+      if (!Array.isArray(args.tasks) || args.tasks.length < 1) throw new Error('tasks array is required');
+      const auditContext = { cwd: context.cwd, resolvePath: (path) => resolveInside(path, context, { mustExist: false }) };
+      const run = createAuditRun({ ...args, dispatchMode: args.dispatchMode || 'host_mediated' }, auditContext);
+      return textResult({
+        ok: true,
+        status: 'prepared',
+        runId: run.runId,
+        runDir: run.runDir,
+        task_count: run.taskCards.length,
+        paths: run.paths,
+        taskcards: run.taskCards.map((task) => ({ task_id: task.task_id, title: task.title, prompt_path: `${run.paths.prompts}\\${task.task_id}.txt` })),
+      }, context);
+    }),
+    tool('audit.ingest_report', 'Ingest one host-mediated worker report into an audit runDir.', {
+      runDir: { type: 'string' },
+      taskId: { type: 'string' },
+      workerId: { type: 'string' },
+      status: { type: 'string' },
+      output: { type: 'string' },
+      report: { type: 'object' },
+      attempt: { type: 'number' },
+    }, async (args) => {
+      const runDir = resolveInside(args.runDir, context, { mustExist: true });
+      return textResult(ingestAuditReport(runDir, args), context);
+    }),
+    tool('audit.run', 'Run a TaskCard/runDir/collector/EvidenceBundle audit pipeline.', {
+      tasks: { type: 'array' },
+      runDir: { type: 'string' },
+      model: { type: 'string' },
+      maxTasks: { type: 'number' },
+      concurrency: { type: 'number' },
+      staggerMs: { type: 'number' },
+      maxFindingsPerTask: { type: 'number' },
+      maxWaitMs: { type: 'number' },
+      failureThreshold: { type: 'number' },
+    }, async (args) => {
+      if (!Array.isArray(args.tasks) || args.tasks.length < 1) throw new Error('tasks array is required');
+      const auditContext = { cwd: context.cwd, resolvePath: (path) => resolveInside(path, context, { mustExist: false }) };
+      const run = createAuditRun(args, auditContext);
+      const pipelineArgs = normalizePipelineArgs({
+        tasks: run.pipelineTasks,
+        model: args.model,
+        maxTasks: args.maxTasks || args.tasks.length,
+        concurrency: args.concurrency,
+        staggerMs: args.staggerMs,
+      }, context);
+      if (pipelineArgs.ok === false) return textResult({ ...pipelineArgs, runDir: run.runDir }, context, true);
+      let dispatch = null;
+      let dispatchError = null;
+      try {
+        dispatch = await callSidecar('pipeline', pipelineArgs, context, Number(args.maxWaitMs || context.config.agent?.taskTimeoutMs || 300000));
+        writePipelineResults(run.runDir, dispatch);
+      } catch (error) {
+        dispatchError = redact(error.message || String(error));
+      }
+      const collected = collectAuditRun(run.runDir, {
+        failureThreshold: args.failureThreshold,
+        mainThreadSampleRate: args.mainThreadSampleRate,
+      });
+      return textResult({
+        ok: !dispatchError,
+        status: dispatchError ? 'dispatch_wait_failed_or_timed_out' : 'completed',
+        runId: run.runId,
+        runDir: run.runDir,
+        task_count: run.taskCards.length,
+        dispatch_error: dispatchError,
+        result_count: dispatch?.results?.length || 0,
+        collector: collected.summary,
+        paths: run.paths,
+      }, context, !!dispatchError);
+    }),
+    tool('audit.collect', 'Collect an existing audit runDir into an EvidenceBundle and gate file.', {
+      runDir: { type: 'string' },
+      maxFindings: { type: 'number' },
+      failureThreshold: { type: 'number' },
+      mainThreadSampleRate: { type: 'number' },
+    }, async (args) => {
+      const runDir = resolveInside(args.runDir, context, { mustExist: true });
+      const collected = collectAuditRun(runDir, args);
+      return textResult({ ok: true, ...collected.summary }, context);
+    }),
+    tool('worker.status', 'Return local workpack, worker-pool, and sidecar status.', {}, async () => textResult({
+      ok: true,
+      pid: process.pid,
+      uptime: process.uptime(),
+      profile: context.profile.name,
+      roots: context.roots,
+      workerPool: workerPoolSettings(context.config),
+      sidecar: managedSidecarStatus(context.config),
+    }, context)),
+    tool('agent.spawn', 'Spawn one external agent through the configured sidecar adapter.', { prompt: { type: 'string' }, model: { type: 'string' }, system: { type: 'string' } }, async (args) => {
+      return textResult(await callSidecar('spawn', args, context, Number(args.timeoutMs || context.config.agent?.taskTimeoutMs || 300000)), context);
+    }),
+    tool('agent.pipeline', 'Run an external multi-agent pipeline through the managed sidecar adapter.', { tasks: { type: 'array' }, model: { type: 'string' }, maxTasks: { type: 'number' }, concurrency: { type: 'number' }, staggerMs: { type: 'number' } }, async (args) => {
       const pipelineArgs = normalizePipelineArgs(args, context);
       if (pipelineArgs.ok === false) return textResult(pipelineArgs, context, true);
-      if (context.agentAdapter && (context.config.sidecar?.mode || 'inprocess') === 'inprocess') {
-        return textResult(await context.agentAdapter.pipeline(pipelineArgs), context);
-      }
-      const url = context.config.sidecar?.url || process.env.UBW_SIDECAR_URL;
-      if (!url) return textResult({ ok: false, status: 'not_configured' }, context);
-      const res = await fetch(`${url.replace(/\/$/, '')}/pipeline`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(pipelineArgs), signal: AbortSignal.timeout(Number(context.config.agent?.taskTimeoutMs || 300000)) });
-      return textResult(await res.json(), context);
+      return textResult(await callSidecar('pipeline', pipelineArgs, context, Number(context.config.agent?.taskTimeoutMs || 300000)), context);
     }),
   ];
 }

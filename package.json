@@ -1,9 +1,9 @@
 {
   "name": "universal-brute-workpack",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Universal Brute Workpack — a full-capability stdio-first Agent MCP workpack with configurable tools, memory fallback, and Agent pipeline orchestration.",
-  "changelog": "0.1.0: stdio-first publishable MCP workpack with full admin default, optional profiles, doctor, memory fallback, and agent adapter.",
-  "changelogDetail": "Adds neutral MCP tool names, stdio default for npx, SSE optional, in-process agent adapter, configurable profiles/deny lists, memory fallback search, .env loading, doctor, and smoke tests.",
+  "changelog": "0.1.1: adds worker search/analyze/diff, managed sidecar orchestration, concurrent agent pipelines, audit runDir collector, code.review, and validate.load.",
+  "changelogDetail": "Adds CPU-parallel fs.grep plus worker.search/analyze/diff, auto-managed sidecar process for agent.spawn/pipeline, pipeline concurrency controls, TaskCard/runDir/report/EvidenceBundle audit tools, structured code.review, static validate.load, richer doctor output, and docs for graceful no-key degradation.",
   "type": "module",
   "main": "src/bridge.js",
   "bin": {
@@ -19,6 +19,15 @@
     "pack:dry": "npm pack --dry-run"
   },
   "license": "BUSL-1.1",
+  "author": "Yupeng Zhou",
+  "homepage": "https://github.com/haoyun18881-beep/universal-brute-workpack#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haoyun18881-beep/universal-brute-workpack.git"
+  },
+  "bugs": {
+    "url": "https://github.com/haoyun18881-beep/universal-brute-workpack/issues"
+  },
   "engines": {
     "node": ">=20"
   },

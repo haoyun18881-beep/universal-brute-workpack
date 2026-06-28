@@ -28,9 +28,11 @@ Important sections:
 | `transport` | `stdio` or `sse`. |
 | `roots` | Allowed file roots. `["*"]` means full filesystem access. |
 | `search.providers` | Exa, Tavily, and DuckDuckGo endpoints and key env names. |
+| `worker` | Local CPU worker pool controls for grep/search/analyze/diff. |
+| `sidecar` | Managed, in-process, or external sidecar mode. |
 | `memory` | External memory/vector service URL plus local fallback scan limits. |
 | `llm` | OpenAI-compatible base URL, key env name, model, timeout, temperature. |
-| `agent` | Pipeline max task count, stagger milliseconds, task timeout. |
+| `agent` | Pipeline max task count, concurrency, stagger milliseconds, task timeout, task history limit. |
 | `limits` | Output, fetch, and command timeout limits. |
 
 Keys can be placed directly in a private config file, but the recommended shareable pattern is to keep key fields empty and use env vars:
@@ -81,6 +83,51 @@ Launch with:
 npx -y universal-brute-workpack serve --stdio --profile admin_no_shell
 ```
 
+## Worker Pool
+
+The worker pool is on by default and uses available CPU parallelism unless capped:
+
+```json
+{
+  "worker": {
+    "enabled": true,
+    "poolSize": 0,
+    "minParallelFiles": 1,
+    "maxFileBytes": 2000000
+  }
+}
+```
+
+`poolSize: 0` means auto. `fs.grep`, `worker.search`, `worker.analyze`, and `worker.diff` use this pool.
+
+## Sidecar And Agent Pipeline
+
+Default sidecar mode is managed:
+
+```json
+{
+  "sidecar": {
+    "mode": "managed",
+    "url": "",
+    "port": 0,
+    "startupTimeoutMs": 15000
+  },
+  "agent": {
+    "maxPipelineTasks": 100,
+    "concurrency": 20,
+    "staggerMs": 0,
+    "taskTimeoutMs": 300000,
+    "taskHistoryLimit": 1000
+  }
+}
+```
+
+Use `inprocess` for the old single-process adapter or `external` with `UBW_SIDECAR_URL` when you manage the sidecar yourself.
+
+## Audit Chain
+
+`audit.run` is the one-call API-backed path. `audit.prepare` + `audit.ingest_report` + `audit.collect` is the host-mediated path for Codex, Cursor, Cline, or another Agent host to create native subagents and write reports back into a UBW runDir.
+
 ## Degradation
 
 No key or service is required for first run.
@@ -90,3 +137,4 @@ No key or service is required for first run.
 | `search.web` | Exa or Tavily key | DuckDuckGo instant answer |
 | `memory.search` | External memory/vector URL | Local text/JSON/Markdown/log keyword scan |
 | `agent.spawn` | OpenAI-compatible LLM endpoint | Returns `not_configured` without crashing |
+| `agent.pipeline` | OpenAI-compatible LLM endpoint | Returns `not_configured` results without breaking local tools |
