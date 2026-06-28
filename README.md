@@ -68,6 +68,16 @@ See `docs/tools.md`.
 
 See `docs/configuration.md` for provider keys, memory backends, profiles, deny lists, roots, and pipeline limits.
 
+## License
+
+Business Source License 1.1. The source is available for personal, research, academic, and small non-commercial use. Enterprise production use, commercial products, SaaS, hosted MCP services, Agent platforms, marketplace redistribution, OEM/white-label use, and commercial derivatives require written authorization from the licensor.
+
+Change License: Apache License v2.0.
+
+Change Date: 2030-06-29.
+
+See `LICENSE` for the full English and Chinese terms.
+
 ## Verify
 
 ```powershell

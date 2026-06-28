@@ -38,6 +38,12 @@ UBW_AGENT_STAGGER_MS=0
 UBW_AGENT_TASK_TIMEOUT_MS=300000
 ```
 
+## License
+
+Universal Brute Workpack uses BUSL-1.1. Personal, academic, research, and small non-commercial use are free. Enterprise production use, commercial services, SaaS, hosted MCP services, Agent platforms, marketplace redistribution, OEM/white-label use, and commercial derivatives require written authorization before the Change Date.
+
+Change License: Apache License v2.0. Change Date: 2030-06-29.
+
 ## SSE Mode
 
 SSE is optional for clients that prefer a long-running local service:

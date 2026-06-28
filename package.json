@@ -1,9 +1,9 @@
 {
   "name": "universal-brute-workpack",
   "version": "0.1.0",
-  "description": "Universal Brute Workpack — a full-capability stdio-first Agent MCP workpack.",
-  "changelog": "0.1.0: stdio-first publishable MCP workpack with full admin default, optional profiles, doctor, and agent adapter.",
-  "changelogDetail": "Adds neutral MCP tool names, stdio default for npx, SSE optional, in-process agent adapter, optional sidecar, .env loading, doctor, and smoke tests.",
+  "description": "Universal Brute Workpack — a full-capability stdio-first Agent MCP workpack with configurable tools, memory fallback, and Agent pipeline orchestration.",
+  "changelog": "0.1.0: stdio-first publishable MCP workpack with full admin default, optional profiles, doctor, memory fallback, and agent adapter.",
+  "changelogDetail": "Adds neutral MCP tool names, stdio default for npx, SSE optional, in-process agent adapter, configurable profiles/deny lists, memory fallback search, .env loading, doctor, and smoke tests.",
   "type": "module",
   "main": "src/bridge.js",
   "bin": {
@@ -18,7 +18,7 @@
     "smoke:stdio": "node ./test/stdio-smoke.mjs",
     "pack:dry": "npm pack --dry-run"
   },
-  "license": "AGPL-3.0",
+  "license": "BUSL-1.1",
   "engines": {
     "node": ">=20"
   },
