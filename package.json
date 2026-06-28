@@ -7,7 +7,7 @@
   "type": "module",
   "main": "src/bridge.js",
   "bin": {
-    "universal-brute-workpack": "./src/bridge.js"
+    "universal-brute-workpack": "src/bridge.js"
   },
   "scripts": {
     "start": "node ./src/bridge.js",
