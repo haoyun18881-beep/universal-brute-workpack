@@ -48,6 +48,8 @@
     "docs/",
     "examples/",
     "integrations/",
+    "plugins/",
+    ".agents/",
     "test/",
     ".env.example",
     "README.md",

@@ -1,0 +1,20 @@
+{
+  "name": "universal-brute-workpack",
+  "interface": {
+    "displayName": "Universal Brute Workpack"
+  },
+  "plugins": [
+    {
+      "name": "universal-brute-workpack",
+      "source": {
+        "source": "local",
+        "path": "./plugins/universal-brute-workpack"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

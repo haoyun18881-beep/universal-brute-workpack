@@ -61,6 +61,7 @@ Available now:
 - Configurable profiles, deny lists, filesystem roots, provider keys, memory backends, LLM endpoints, pipeline task limits, and stagger timing.
 - OpenAI-compatible API mode for `agent.spawn` and `agent.pipeline`; if no model backend is configured, Agent tools return `not_configured` instead of killing the MCP process.
 - Optional Codex companion skills under `integrations/codex-skills/` for scenario-based, low-token UBW usage.
+- Optional Codex plugin wrapper under `plugins/universal-brute-workpack/` plus `.agents/plugins/marketplace.json` for users who want UBW to appear in the Codex plugin UI.
 
 Proven pattern / current portable base:
 
@@ -92,9 +93,30 @@ command = "npx"
 args = ["-y", "universal-brute-workpack", "serve", "--stdio"]
 ```
 
+This direct MCP setup gives Codex the tools, but it does not make UBW appear in Codex's plugin browser or `@` plugin picker.
+
+If you want the plugin UI experience, install the optional Codex plugin wrapper from this repository's marketplace:
+
+```bash
+codex plugin add universal-brute-workpack@universal-brute-workpack
+```
+
+That wrapper still launches the npm package with `npx`; it is a Codex-facing shell around the same MCP server. Users may need to install or enable it manually in Codex, then start a new thread before `@Universal Brute Workpack` and its MCP tools are visible.
+
 No API key is required for first run. File tools, command execution, validation, DuckDuckGo fallback search, and local keyword memory search work out of the box.
 
 If Tavily or Exa is not configured, exhausted, or unavailable, `search.web` falls back instead of crashing. If no memory/vector service is configured, `memory.search` falls back to local text search. If no LLM endpoint is configured, `agent.spawn` and `agent.pipeline` report `not_configured` while every local tool continues working.
+
+## Optional Codex Plugin Wrapper
+
+There are two Codex integration layers:
+
+| Layer | What It Does | Install Path |
+| --- | --- | --- |
+| MCP server | Gives Codex the actual UBW tools through `npx universal-brute-workpack serve --stdio`. | Add `[mcp_servers.universal_brute_workpack]` to Codex config. |
+| Codex plugin wrapper | Makes UBW show as a Codex plugin and bundles the companion skills. | Install from `.agents/plugins/marketplace.json`. |
+
+The plugin wrapper is manual for now. npm cannot automatically register a Codex plugin in every user's app. The wrapper is included so users can install it deliberately and understand that it points back to the npm MCP server.
 
 ## Optional Codex Skills
 

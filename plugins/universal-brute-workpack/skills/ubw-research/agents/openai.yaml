@@ -1,0 +1,4 @@
+interface:
+  display_name: "UBW Research"
+  short_description: "Web and memory lookup via UBW"
+  default_prompt: "Use $ubw-research to look up web pages or memory evidence with Universal Brute Workpack."

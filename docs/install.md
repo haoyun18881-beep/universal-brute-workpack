@@ -4,11 +4,25 @@ Universal Brute Workpack is stdio-first. Most MCP clients can auto-start it with
 
 ## Codex
 
+Direct MCP setup:
+
 ```toml
 [mcp_servers.universal_brute_workpack]
 command = "npx"
 args = ["-y", "universal-brute-workpack", "serve", "--stdio"]
 ```
+
+This gives Codex the UBW tools, but it does not make UBW appear as a plugin card or `@` plugin entry.
+
+Optional Codex plugin wrapper:
+
+```bash
+codex plugin add universal-brute-workpack@universal-brute-workpack
+```
+
+The wrapper is declared in `.agents/plugins/marketplace.json` and lives at `plugins/universal-brute-workpack/`. It launches the same npm MCP server with `npx universal-brute-workpack@0.1.2 serve --stdio --profile admin` and includes the companion skills.
+
+Important: this plugin layer is manual. npm install or `npx` does not automatically register a Codex plugin for every user. After installing or enabling the wrapper in Codex, start a new thread before expecting `@Universal Brute Workpack` or the MCP tools to appear.
 
 ## Claude Desktop / Cursor / Cline / Continue
 

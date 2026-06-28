@@ -1,0 +1,4 @@
+interface:
+  display_name: "UBW Edit"
+  short_description: "Controlled file changes via UBW"
+  default_prompt: "Use $ubw-edit to write, copy, move, or patch files with Universal Brute Workpack."

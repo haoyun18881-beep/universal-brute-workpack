@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "universal_brute_workpack": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "universal-brute-workpack@0.1.2",
+        "serve",
+        "--stdio",
+        "--profile",
+        "admin"
+      ],
+      "startup_timeout_sec": 120
+    }
+  }
+}
