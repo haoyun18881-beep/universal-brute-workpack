@@ -2,7 +2,7 @@ const DEFAULT_PROFILES = {
   admin: { allow: ['*'], write: true, exec: true, spawnDepth: 100 },
   full: { extends: 'admin' },
   readonly: {
-    allow: ['search.web', 'search.fetch', 'fs.glob', 'fs.grep', 'fs.list', 'file.read', 'code.review', 'memory.search', 'memory.recall', 'worker.search', 'worker.analyze', 'worker.diff', 'worker.status', 'validate.check', 'validate.load'],
+    allow: ['search.web', 'search.fetch', 'fs.glob', 'fs.grep', 'fs.list', 'file.read', 'code.review', 'memory.search', 'memory.recall', 'worker.analyze', 'worker.diff', 'worker.status', 'validate.check', 'validate.load'],
     write: false,
     exec: false,
     spawnDepth: 0,

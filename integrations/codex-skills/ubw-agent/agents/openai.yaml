@@ -1,0 +1,4 @@
+interface:
+  display_name: "UBW Agent"
+  short_description: "Spawn and pipeline Agent tasks"
+  default_prompt: "Use $ubw-agent to dispatch agent.spawn or agent.pipeline tasks with Universal Brute Workpack."

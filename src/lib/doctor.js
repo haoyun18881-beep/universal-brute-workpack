@@ -52,7 +52,7 @@ export async function runDoctor(config) {
   return {
     ok: true,
     service: 'universal-brute-workpack',
-    version: '0.1.1',
+    version: '0.1.2',
     node: checkNodeVersion(),
     transport_default: config.transport,
     profile: profile.name,

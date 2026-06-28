@@ -21,7 +21,6 @@ Default launch mode is `admin`, so all tools are visible and callable unless the
 | `validate.diff` | Git diff adapter. |
 | `memory.search` | Memory/vector search through a configured service, with local text fallback. |
 | `memory.recall` | Alias of `memory.search` for clients that use recall wording. |
-| `worker.search` | Explicit worker-pool file content search; `fs.grep` uses the same engine. |
 | `worker.analyze` | Parallel file statistics, extension counts, line counts, TODO/FIXME summaries, and largest-file hints. |
 | `worker.diff` | Parallel file or directory diff by sha256, size, and existence. |
 | `audit.prepare` | Prepare a host-mediated audit runDir with TaskCards, prompts, manifest, and report dropbox. |
@@ -34,7 +33,7 @@ Default launch mode is `admin`, so all tools are visible and callable unless the
 
 ## Local Worker Pool
 
-`fs.grep` and `worker.search` use Node worker threads for local bulk search. By default the pool size follows the machine's available CPU parallelism. Set `UBW_WORKER_POOL_SIZE` only when you want to cap it.
+`fs.grep` is the single file-content search entrypoint and uses Node worker threads for local bulk search. By default the pool size follows the machine's available CPU parallelism. Set `UBW_WORKER_POOL_SIZE` only when you want to cap it.
 
 Important controls:
 

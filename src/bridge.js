@@ -8,7 +8,7 @@ import { redact } from './lib/redact.js';
 import { createAgentAdapter } from './lib/agent-adapter.js';
 import { runDoctor } from './lib/doctor.js';
 
-const SERVER_INFO = { name: 'universal-brute-workpack', title: 'Universal Brute Workpack', version: '0.1.1' };
+const SERVER_INFO = { name: 'universal-brute-workpack', title: 'Universal Brute Workpack', version: '0.1.2' };
 
 function makeContext(profileName, baseConfig) {
   const profiles = loadProfiles();

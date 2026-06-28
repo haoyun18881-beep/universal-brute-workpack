@@ -22,6 +22,25 @@ No key is required for first run. `search.web` falls back to DuckDuckGo when `TA
 
 For more control, copy `config/universal-brute-workpack.example.json` and set `UBW_CONFIG` to that file. Tool allow/deny choices live in `config/profiles.example.json`; copy it and set `UBW_PROFILES` if you want a custom boundary.
 
+## Optional Codex Companion Skills
+
+The package includes short Codex skills under `integrations/codex-skills/`. They do not change the MCP server; they teach Codex when to use the right subset of UBW tools.
+
+From a cloned repo or unpacked npm tarball:
+
+```powershell
+Copy-Item -Recurse .\integrations\codex-skills\ubw-* "$env:USERPROFILE\.codex\skills\"
+```
+
+Skill groups:
+
+- `ubw-research`: `search.web`, `search.fetch`, `memory.search`, `memory.recall`
+- `ubw-files`: `fs.glob`, `fs.grep`, `fs.list`, `file.read`, `worker.analyze`, `worker.diff`
+- `ubw-edit`: `file.write`, `file.copy`, `file.move`, `code.patch`
+- `ubw-code`: `code.review`, `validate.*`, `command.exec`
+- `ubw-audit`: `audit.prepare`, `audit.ingest_report`, `audit.run`, `audit.collect`
+- `ubw-agent`: `agent.spawn`, `agent.pipeline`
+
 `agent.spawn` and `agent.pipeline` require an OpenAI-compatible backend:
 
 ```text
@@ -47,8 +66,8 @@ npx -y universal-brute-workpack doctor
 
 Healthy first run should show:
 
-- `version: "0.1.1"`
-- `tools.count: 27`
+- `version: "0.1.2"`
+- `tools.count: 26`
 - `profile: "admin"` unless you selected another profile
 - `worker_pool.enabled: true`
 - `sidecar.mode: "managed"`

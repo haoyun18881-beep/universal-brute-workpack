@@ -1,9 +1,9 @@
 {
   "name": "universal-brute-workpack",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Universal Brute Workpack — a full-capability stdio-first Agent MCP workpack with configurable tools, memory fallback, and Agent pipeline orchestration.",
-  "changelog": "0.1.1: adds worker search/analyze/diff, managed sidecar orchestration, concurrent agent pipelines, audit runDir collector, code.review, and validate.load.",
-  "changelogDetail": "Adds CPU-parallel fs.grep plus worker.search/analyze/diff, auto-managed sidecar process for agent.spawn/pipeline, pipeline concurrency controls, TaskCard/runDir/report/EvidenceBundle audit tools, structured code.review, static validate.load, richer doctor output, and docs for graceful no-key degradation.",
+  "changelog": "0.1.2: removes redundant worker.search and ships optional Codex companion skills.",
+  "changelogDetail": "Keeps worker.analyze and worker.diff, removes the duplicate worker.search alias, documents fs.grep as the only file-content search tool backed by the local worker pool, and includes lightweight Codex skills under integrations/codex-skills for scenario-based UBW usage.",
   "type": "module",
   "main": "src/bridge.js",
   "bin": {
@@ -47,6 +47,7 @@
     "config/",
     "docs/",
     "examples/",
+    "integrations/",
     "test/",
     ".env.example",
     "README.md",

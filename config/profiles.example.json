@@ -52,7 +52,6 @@
       "code.review",
       "memory.search",
       "memory.recall",
-      "worker.search",
       "worker.analyze",
       "worker.diff",
       "worker.status",

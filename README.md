@@ -51,7 +51,7 @@ The goal is not to replace the main Agent. The goal is to make one strong Agent 
 Available now:
 
 - Full-capability MCP tool bundle with stdio and SSE transports.
-- 27 neutral tools for search, fetch, file operations, code patching/review, commands, validation, memory search/recall, worker search/analyze/diff, audit chain, status, and Agent spawn/pipeline.
+- 26 neutral tools for search, fetch, file operations, code patching/review, commands, validation, memory search/recall, worker analyze/diff, audit chain, status, and Agent spawn/pipeline.
 - CPU-parallel `fs.grep` through a local worker pool. By default it uses available machine parallelism; set `UBW_WORKER_POOL_SIZE` only when you want to limit it.
 - `code.patch` uses exact replacements and rolls back JS-like files when `node --check` fails.
 - Managed sidecar mode for `agent.spawn` and `agent.pipeline`; users do not need to start a second terminal for the sidecar.
@@ -60,6 +60,7 @@ Available now:
 - Zero-key first run: DuckDuckGo fallback for web search and local text/JSON/Markdown/log fallback for memory search.
 - Configurable profiles, deny lists, filesystem roots, provider keys, memory backends, LLM endpoints, pipeline task limits, and stagger timing.
 - OpenAI-compatible API mode for `agent.spawn` and `agent.pipeline`; if no model backend is configured, Agent tools return `not_configured` instead of killing the MCP process.
+- Optional Codex companion skills under `integrations/codex-skills/` for scenario-based, low-token UBW usage.
 
 Proven pattern / current portable base:
 
@@ -94,6 +95,16 @@ args = ["-y", "universal-brute-workpack", "serve", "--stdio"]
 No API key is required for first run. File tools, command execution, validation, DuckDuckGo fallback search, and local keyword memory search work out of the box.
 
 If Tavily or Exa is not configured, exhausted, or unavailable, `search.web` falls back instead of crashing. If no memory/vector service is configured, `memory.search` falls back to local text search. If no LLM endpoint is configured, `agent.spawn` and `agent.pipeline` report `not_configured` while every local tool continues working.
+
+## Optional Codex Skills
+
+Codex users can copy the lightweight companion skills so Codex loads short scenario guides instead of repeatedly reading the full UBW manual:
+
+```powershell
+Copy-Item -Recurse .\integrations\codex-skills\ubw-* "$env:USERPROFILE\.codex\skills\"
+```
+
+Included skills: `ubw-research`, `ubw-files`, `ubw-edit`, `ubw-code`, `ubw-audit`, and `ubw-agent`.
 
 ## Example Use Cases
 
@@ -246,7 +257,7 @@ Personal, academic, research, and small non-commercial use are free under the in
 
 **Is 100-way Agent orchestration already shipped?**
 
-The portable base is shipped in v0.1.1: worker pool, managed sidecar, concurrent API pipeline, TaskCards, runDir, report ingestion, collector summary, EvidenceBundle, and gate file. OpenClaw has demonstrated the 100-way pre-audit pattern in a larger system; UBW provides the generic MCP package foundation for that style of workflow.
+The portable base is shipped in v0.1.2: worker pool, managed sidecar, concurrent API pipeline, TaskCards, runDir, report ingestion, collector summary, EvidenceBundle, gate file, and optional Codex companion skills. OpenClaw has demonstrated the 100-way pre-audit pattern in a larger system; UBW provides the generic MCP package foundation for that style of workflow.
 
 **What happens when keys or quotas are missing?**
 

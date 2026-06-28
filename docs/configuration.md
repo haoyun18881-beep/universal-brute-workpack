@@ -28,7 +28,7 @@ Important sections:
 | `transport` | `stdio` or `sse`. |
 | `roots` | Allowed file roots. `["*"]` means full filesystem access. |
 | `search.providers` | Exa, Tavily, and DuckDuckGo endpoints and key env names. |
-| `worker` | Local CPU worker pool controls for grep/search/analyze/diff. |
+| `worker` | Local CPU worker pool controls for grep/analyze/diff. |
 | `sidecar` | Managed, in-process, or external sidecar mode. |
 | `memory` | External memory/vector service URL plus local fallback scan limits. |
 | `llm` | OpenAI-compatible base URL, key env name, model, timeout, temperature. |
@@ -98,7 +98,7 @@ The worker pool is on by default and uses available CPU parallelism unless cappe
 }
 ```
 
-`poolSize: 0` means auto. `fs.grep`, `worker.search`, `worker.analyze`, and `worker.diff` use this pool.
+`poolSize: 0` means auto. `fs.grep`, `worker.analyze`, and `worker.diff` use this pool.
 
 ## Sidecar And Agent Pipeline
 

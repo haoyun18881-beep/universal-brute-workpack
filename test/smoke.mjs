@@ -48,7 +48,7 @@ try {
 
   const list = await rpc('tools/list');
   const names = list.result.tools.map((item) => item.name);
-  for (const expected of ['search.web', 'fs.glob', 'file.write', 'command.exec', 'memory.search', 'memory.recall', 'worker.search', 'worker.analyze', 'worker.diff', 'audit.prepare', 'audit.ingest_report', 'audit.run', 'audit.collect', 'agent.spawn', 'agent.pipeline']) {
+  for (const expected of ['search.web', 'fs.glob', 'fs.grep', 'file.write', 'command.exec', 'memory.search', 'memory.recall', 'worker.analyze', 'worker.diff', 'audit.prepare', 'audit.ingest_report', 'audit.run', 'audit.collect', 'agent.spawn', 'agent.pipeline']) {
     assert(names.includes(expected), `${expected} should be visible in admin profile`);
   }
 
@@ -66,9 +66,10 @@ try {
   assert(memoryText.includes('local_keyword_file_scan'));
   assert(memoryText.includes('memory needle'));
 
-  const workerSearch = await rpc('tools/call', { name: 'worker.search', arguments: { root, pattern: 'memory needle', maxResults: 5 } });
-  assert(!workerSearch.error, workerSearch.error?.message);
-  assert(workerSearch.result.content[0].text.includes('memory needle'));
+  const grep = await rpc('tools/call', { name: 'fs.grep', arguments: { root, pattern: 'memory needle', maxResults: 5 } });
+  assert(!grep.error, grep.error?.message);
+  assert(grep.result.content[0].text.includes('memory needle'));
+  assert(grep.result.content[0].text.includes('"workerCount"'));
 
   const workerAnalyze = await rpc('tools/call', { name: 'worker.analyze', arguments: { root, maxFiles: 20 } });
   assert(!workerAnalyze.error, workerAnalyze.error?.message);

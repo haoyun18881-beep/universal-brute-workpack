@@ -596,16 +596,6 @@ export function buildTools(context) {
     }),
     tool('memory.search', 'Search memory through an external service, then local text files as fallback.', { query: { type: 'string' }, backend: { type: 'string' }, root: { type: 'string' }, topK: { type: 'number' }, maxFiles: { type: 'number' } }, async (args) => memorySearch(args, context)),
     tool('memory.recall', 'Alias of memory.search for Agent clients that use recall wording.', { query: { type: 'string' }, backend: { type: 'string' }, root: { type: 'string' }, topK: { type: 'number' }, maxFiles: { type: 'number' } }, async (args) => memorySearch(args, context)),
-    tool('worker.search', 'Explicit worker-pool file content search; fs.grep uses the same engine.', { root: { type: 'string' }, pattern: { type: 'string' }, maxResults: { type: 'number' }, maxFiles: { type: 'number' } }, async (args) => {
-      const root = resolveInside(args.root || context.cwd, context, { mustExist: true });
-      const pattern = String(args.pattern || '');
-      if (!pattern) throw new Error('pattern is required');
-      const maxResults = Number(args.maxResults || 100);
-      const maxFiles = Number(args.maxFiles || 10000);
-      const files = walk(root, maxFiles);
-      const result = await grepFiles(files, pattern, { config: context.config, maxResults });
-      return textResult({ root, pattern, candidateFiles: files.length, ...result }, context);
-    }),
     tool('worker.analyze', 'Analyze files in parallel for size, extension, line, TODO, and FIXME summaries.', { root: { type: 'string' }, maxFiles: { type: 'number' } }, async (args) => {
       const root = resolveInside(args.root || context.cwd, context, { mustExist: true });
       const maxFiles = Number(args.maxFiles || 10000);

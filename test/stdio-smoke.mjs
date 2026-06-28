@@ -56,7 +56,6 @@ try {
   const names = list.result.tools.map((tool) => tool.name);
   assert(names.includes('command.exec'));
   assert(names.includes('memory.search'));
-  assert(names.includes('worker.search'));
   assert(names.includes('worker.analyze'));
   assert(names.includes('worker.diff'));
   assert(names.includes('audit.prepare'));
