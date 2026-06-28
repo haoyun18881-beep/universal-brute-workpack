@@ -1,0 +1,83 @@
+{
+  "admin": {
+    "allow": [
+      "*"
+    ],
+    "deny": [],
+    "write": true,
+    "exec": true,
+    "spawnDepth": 100
+  },
+  "full": {
+    "extends": "admin"
+  },
+  "orchestrator": {
+    "extends": "developer",
+    "allow": [
+      "agent.spawn",
+      "agent.pipeline"
+    ],
+    "deny": [],
+    "write": true,
+    "exec": true,
+    "spawnDepth": 20
+  },
+  "developer": {
+    "extends": "readonly",
+    "allow": [
+      "file.write",
+      "file.copy",
+      "file.move",
+      "code.patch",
+      "command.exec",
+      "validate.diff"
+    ],
+    "deny": [],
+    "write": true,
+    "exec": true,
+    "spawnDepth": 0
+  },
+  "readonly": {
+    "allow": [
+      "search.web",
+      "search.fetch",
+      "fs.glob",
+      "fs.grep",
+      "fs.list",
+      "file.read",
+      "memory.search",
+      "memory.recall",
+      "worker.status",
+      "validate.check"
+    ],
+    "deny": [],
+    "write": false,
+    "exec": false,
+    "spawnDepth": 0
+  },
+  "subagent": {
+    "extends": "developer",
+    "deny": [
+      "agent.spawn",
+      "agent.pipeline"
+    ],
+    "spawnDepth": 0
+  },
+  "admin_no_shell": {
+    "extends": "admin",
+    "deny": [
+      "command.exec"
+    ],
+    "exec": false
+  },
+  "admin_no_write": {
+    "extends": "admin",
+    "deny": [
+      "file.write",
+      "file.copy",
+      "file.move",
+      "code.patch"
+    ],
+    "write": false
+  }
+}

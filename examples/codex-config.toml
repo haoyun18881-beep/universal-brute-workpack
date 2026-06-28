@@ -1,0 +1,3 @@
+[mcp_servers.universal_brute_workpack]
+command = "npx"
+args = ["-y", "universal-brute-workpack", "serve", "--stdio"]
