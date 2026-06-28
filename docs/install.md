@@ -17,12 +17,13 @@ This gives Codex the UBW tools, but it does not make UBW appear as a plugin card
 Optional Codex plugin wrapper:
 
 ```bash
+codex plugin marketplace add <path-or-repo-root-containing-.agents/plugins/marketplace.json>
 codex plugin add universal-brute-workpack@universal-brute-workpack
 ```
 
-The wrapper is declared in `.agents/plugins/marketplace.json` and lives at `plugins/universal-brute-workpack/`. It launches the same npm MCP server with `npx universal-brute-workpack@0.1.2 serve --stdio --profile admin` and includes the companion skills.
+The wrapper is declared in `.agents/plugins/marketplace.json` and lives at `plugins/universal-brute-workpack/`. It launches the same npm MCP server with `npx universal-brute-workpack@0.1.3 serve --stdio --profile admin` and includes the companion skills.
 
-Important: this plugin layer is manual. npm install or `npx` does not automatically register a Codex plugin for every user. After installing or enabling the wrapper in Codex, start a new thread before expecting `@Universal Brute Workpack` or the MCP tools to appear.
+Important: this plugin layer is manual. npm install or `npx` does not automatically register a Codex plugin for every user, and official marketplace curation is not required for self-distribution. If your Codex build exposes plugin installation through the app UI instead of the CLI, add this repository marketplace there. After installing or enabling the wrapper in Codex, start a new thread before expecting `@Universal Brute Workpack` or the MCP tools to appear.
 
 ## Claude Desktop / Cursor / Cline / Continue
 
@@ -80,7 +81,7 @@ npx -y universal-brute-workpack doctor
 
 Healthy first run should show:
 
-- `version: "0.1.2"`
+- `version: "0.1.3"`
 - `tools.count: 26`
 - `profile: "admin"` unless you selected another profile
 - `worker_pool.enabled: true`

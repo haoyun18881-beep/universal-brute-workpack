@@ -1,6 +1,6 @@
 {
   "name": "universal-brute-workpack",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Universal Brute Workpack Codex wrapper for the npm MCP workpack.",
   "author": {
     "name": "Yupeng Zhou",

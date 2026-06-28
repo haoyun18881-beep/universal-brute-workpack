@@ -1,9 +1,9 @@
 {
   "name": "universal-brute-workpack",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Universal Brute Workpack — a full-capability stdio-first Agent MCP workpack with configurable tools, memory fallback, and Agent pipeline orchestration.",
-  "changelog": "0.1.2: removes redundant worker.search and ships optional Codex companion skills.",
-  "changelogDetail": "Keeps worker.analyze and worker.diff, removes the duplicate worker.search alias, documents fs.grep as the only file-content search tool backed by the local worker pool, and includes lightweight Codex skills under integrations/codex-skills for scenario-based UBW usage.",
+  "changelog": "0.1.3: ships the optional Codex plugin wrapper and marketplace files.",
+  "changelogDetail": "Includes .agents/plugins/marketplace.json and plugins/universal-brute-workpack so Codex users can install the wrapper from a marketplace while the wrapper launches the same npm MCP server through npx.",
   "type": "module",
   "main": "src/bridge.js",
   "bin": {

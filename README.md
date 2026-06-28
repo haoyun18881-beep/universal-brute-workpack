@@ -95,13 +95,14 @@ args = ["-y", "universal-brute-workpack", "serve", "--stdio"]
 
 This direct MCP setup gives Codex the tools, but it does not make UBW appear in Codex's plugin browser or `@` plugin picker.
 
-If you want the plugin UI experience, install the optional Codex plugin wrapper from this repository's marketplace:
+If you want the plugin UI experience, install the optional Codex plugin wrapper from this repository's marketplace. This does not require official marketplace curation; a user can add this repository marketplace directly:
 
 ```bash
+codex plugin marketplace add <path-or-repo-root-containing-.agents/plugins/marketplace.json>
 codex plugin add universal-brute-workpack@universal-brute-workpack
 ```
 
-That wrapper still launches the npm package with `npx`; it is a Codex-facing shell around the same MCP server. Users may need to install or enable it manually in Codex, then start a new thread before `@Universal Brute Workpack` and its MCP tools are visible.
+That wrapper still launches the npm package with `npx`; it is a Codex-facing shell around the same MCP server. If your Codex build exposes plugin installation through the app UI instead of the CLI, add this repository marketplace there, install the wrapper, then start a new thread before `@Universal Brute Workpack` and its MCP tools are visible.
 
 No API key is required for first run. File tools, command execution, validation, DuckDuckGo fallback search, and local keyword memory search work out of the box.
 
@@ -114,9 +115,9 @@ There are two Codex integration layers:
 | Layer | What It Does | Install Path |
 | --- | --- | --- |
 | MCP server | Gives Codex the actual UBW tools through `npx universal-brute-workpack serve --stdio`. | Add `[mcp_servers.universal_brute_workpack]` to Codex config. |
-| Codex plugin wrapper | Makes UBW show as a Codex plugin and bundles the companion skills. | Install from `.agents/plugins/marketplace.json`. |
+| Codex plugin wrapper | Makes UBW show as a Codex plugin and bundles the companion skills. | Add this repository marketplace, then install from `.agents/plugins/marketplace.json`. |
 
-The plugin wrapper is manual for now. npm cannot automatically register a Codex plugin in every user's app. The wrapper is included so users can install it deliberately and understand that it points back to the npm MCP server.
+The plugin wrapper is manual for now. npm cannot automatically register a Codex plugin in every user's app, and official marketplace curation is not required for self-distribution. The wrapper is included so users can install it deliberately and understand that it points back to the npm MCP server.
 
 ## Optional Codex Skills
 
@@ -279,7 +280,7 @@ Personal, academic, research, and small non-commercial use are free under the in
 
 **Is 100-way Agent orchestration already shipped?**
 
-The portable base is shipped in v0.1.2: worker pool, managed sidecar, concurrent API pipeline, TaskCards, runDir, report ingestion, collector summary, EvidenceBundle, gate file, and optional Codex companion skills. OpenClaw has demonstrated the 100-way pre-audit pattern in a larger system; UBW provides the generic MCP package foundation for that style of workflow.
+The portable base is shipped in v0.1.x: worker pool, managed sidecar, concurrent API pipeline, TaskCards, runDir, report ingestion, collector summary, EvidenceBundle, gate file, optional Codex companion skills, and an optional Codex plugin wrapper. OpenClaw has demonstrated the 100-way pre-audit pattern in a larger system; UBW provides the generic MCP package foundation for that style of workflow.
 
 **What happens when keys or quotas are missing?**
 
