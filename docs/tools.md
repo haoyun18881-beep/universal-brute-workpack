@@ -22,3 +22,9 @@ Default launch mode is `admin`, so all tools are visible and callable unless the
 | `worker.status` | Local workpack process status. |
 | `agent.spawn` | Built-in OpenAI-compatible single agent task, or external sidecar when configured. |
 | `agent.pipeline` | Multi-task pipeline with configurable task count and stagger timing. |
+
+## Pipeline Direction
+
+The current package includes an OpenAI-compatible API pipeline. The next target is a host-mediated pipeline for Agent clients that already have subscription or native subagent capabilities.
+
+In that mode, Universal Brute Workpack will manage TaskCards, run directories, collector contracts, failure thresholds, and EvidenceBundles, while the host Agent decides how to create native subagents, threads, or review passes. This is the path for turning a subscription Agent into a control plane without forcing every user to buy a high-end API key.

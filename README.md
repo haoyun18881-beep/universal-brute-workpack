@@ -4,6 +4,37 @@ Universal Brute Workpack is a full-capability, stdio-first Agent MCP workpack.
 
 It is meant to be usable by Codex, OpenClaw, Claude Desktop, Cursor, Cline, Continue, or any other MCP client that can speak SSE or stdio.
 
+It turns an Agent client into a local-first workbench: files, grep, patching, commands, web search fallback, memory recall fallback, and model-backed Agent tasks behind one MCP server.
+
+## Why It Exists
+
+Most Agent clients are strongest when they judge, decide, and close the loop. They are weaker, slower, or more expensive when they personally do every repetitive search, log scan, candidate implementation, and audit pass.
+
+Universal Brute Workpack is designed to move that bulk work out of the main Agent thread:
+
+- Local tools do zero-token work on the user's machine.
+- Cheap API models can handle wide exploratory batches.
+- Expensive/pro subscription Agents can stay focused on planning, review, and final decisions.
+- Future host-mediated pipelines can let subscription Agents such as Codex Pro or other Agent IDEs act as the control plane for their own native subagents or threads.
+
+The goal is not to replace the main Agent. The goal is to make one strong Agent feel like a coordinated workbench.
+
+## Capability Model
+
+Available now:
+
+- Full-capability MCP tool bundle with stdio and SSE transports.
+- 18 neutral tools for search, fetch, file operations, code patching, commands, validation, memory search/recall, status, and Agent spawn/pipeline.
+- Zero-key first run: DuckDuckGo fallback for web search and local text/JSON/Markdown/log fallback for memory search.
+- Configurable profiles, deny lists, filesystem roots, provider keys, memory backends, LLM endpoints, pipeline task limits, and stagger timing.
+- OpenAI-compatible API mode for `agent.spawn` and `agent.pipeline`.
+
+Proven pattern / next target:
+
+- OpenClaw has already demonstrated 100-way prompt-contained pre-audit as an external orchestration pattern.
+- Universal Brute Workpack is being shaped to make that pattern portable: TaskCards, run directories, collector contracts, EvidenceBundles, failure thresholds, and main-Agent review gates.
+- The high-value path is a two-layer audit loop: broad low-cost candidate discovery, then focused high-quality review by a smaller number of stronger Agents.
+
 ## Quick Start
 
 Most MCP clients can auto-start the workpack with `npx`:
