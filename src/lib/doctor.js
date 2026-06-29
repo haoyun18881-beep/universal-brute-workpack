@@ -52,7 +52,7 @@ export async function runDoctor(config) {
   return {
     ok: true,
     service: 'universal-brute-workpack',
-    version: '0.1.4',
+    version: '0.1.5',
     node: checkNodeVersion(),
     transport_default: config.transport,
     profile: profile.name,
@@ -61,7 +61,7 @@ export async function runDoctor(config) {
     worker_pool: workerPoolSettings(config),
     sidecar: managedSidecarStatus(config),
     ports: {
-      sse: await checkPort(config.port),
+      http: await checkPort(config.port),
       sidecar: sidecar.mode === 'external' || sidecar.mode === 'url'
         ? { mode: sidecar.mode, required: true, configured_url: sidecar.url }
         : { mode: sidecar.mode, required: false, managed_on_first_agent_call: sidecar.managed },
@@ -72,6 +72,7 @@ export async function runDoctor(config) {
     },
     notes: [
       'stdio clients do not need a listening port',
+      'streamable-http clients use POST /mcp; legacy SSE clients can still use /sse',
       'search.web works without keys through DuckDuckGo fallback',
       'memory.search works without a memory service through local text fallback',
       'agent.spawn needs LLM_BASE_URL or OPENAI_BASE_URL for real model calls',

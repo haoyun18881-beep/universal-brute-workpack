@@ -35,6 +35,13 @@ function expandRoot(input, cwd) {
   return resolve(isAbsolute(value) ? value : join(cwd, value));
 }
 
+function normalizeTransport(value) {
+  const raw = String(value || 'stdio').toLowerCase().replaceAll('_', '-');
+  if (raw === 'http' || raw === 'mcp-http' || raw === 'streamable' || raw === 'streamable-http') return 'streamable-http';
+  if (raw === 'http-sse') return 'sse';
+  return raw;
+}
+
 export function parseArgs(argv = process.argv.slice(2)) {
   const out = { command: 'serve' };
   let commandSet = false;
@@ -59,6 +66,7 @@ export function parseArgs(argv = process.argv.slice(2)) {
   }
   if (out.stdio) out.transport = 'stdio';
   if (out.sse) out.transport = 'sse';
+  if (out.http || out['streamable-http'] || out.streamable) out.transport = 'streamable-http';
   if (out.command === 'stdio') {
     out.command = 'serve';
     out.transport = 'stdio';
@@ -67,6 +75,11 @@ export function parseArgs(argv = process.argv.slice(2)) {
     out.command = 'serve';
     out.transport = 'sse';
   }
+  if (out.command === 'http' || out.command === 'streamable-http') {
+    out.command = 'serve';
+    out.transport = 'streamable-http';
+  }
+  if (out.transport) out.transport = normalizeTransport(out.transport);
   return out;
 }
 
@@ -76,7 +89,7 @@ export function loadConfig(args = {}) {
     || join(PROJECT_ROOT, 'config', 'universal-brute-workpack.example.json');
   const fileConfig = readJson(configPath);
   const defaults = {
-    server: { host: '127.0.0.1', port: 18890 },
+    server: { host: '127.0.0.1', port: 18890, allowedOrigins: [] },
     profile: 'admin',
     transport: 'stdio',
     roots: ['*'],
@@ -131,9 +144,9 @@ export function loadConfig(args = {}) {
     projectRoot: PROJECT_ROOT,
     roots: rawRoots.map((root) => expandRoot(root, cwd)),
     profile: args.profile || process.env.UBW_PROFILE || config.profile || 'admin',
-    transport: args.transport || process.env.UBW_TRANSPORT || config.transport || 'stdio',
-    host: args.host || config.server?.host || '127.0.0.1',
-    port: Number(args.port || config.server?.port || 18890),
+    transport: normalizeTransport(args.transport || process.env.UBW_TRANSPORT || config.transport || 'stdio'),
+    host: args.host || process.env.UBW_HOST || config.server?.host || '127.0.0.1',
+    port: Number(args.port || process.env.UBW_PORT || config.server?.port || 18890),
   };
 }
 

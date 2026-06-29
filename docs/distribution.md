@@ -56,12 +56,36 @@ Smithery has two relevant paths:
 - URL publishing: requires a public Streamable HTTP endpoint.
 - Local stdio publishing: requires an MCPB bundle.
 
-UBW currently ships stdio and SSE. It does not yet ship a public Streamable HTTP deployment target or an MCPB bundle. Therefore Smithery is documented as prepared-but-blocked until one of these is added.
+UBW now ships a local Streamable HTTP transport in addition to stdio and legacy SSE:
+
+```bash
+npx -y universal-brute-workpack serve --transport streamable-http --port 18890 --profile admin
+```
+
+Local endpoints:
+
+```text
+MCP endpoint: http://127.0.0.1:18890/mcp
+Server card:  http://127.0.0.1:18890/.well-known/mcp/server-card.json
+```
+
+This completes the package-side prerequisite for Smithery URL publishing, but it is not a Smithery release by itself. Actual URL publishing still requires a public HTTPS deployment of `/mcp`, plus any desired auth/OAuth behavior.
+
+For the local stdio path, UBW now includes MCPB staging scripts and docs:
+
+```bash
+npm run mcpb:stage
+npm run mcpb:validate
+npm run mcpb:pack
+```
+
+See `docs/mcpb.md`. A staged or packed local bundle is still not a Smithery release; uploading or listing it remains an explicit release step.
 
 Possible next increments:
 
-- add Streamable HTTP transport and a deployable URL mode
-- or create an MCPB bundle with installation metadata
+- execute the public HTTPS hosting recipe in `docs/smithery-hosting.md`
+- add OAuth/auth support if the public endpoint is not meant to be open
+- run MCPB bundle validation and decide whether to upload the `.mcpb` through the Smithery local stdio route
 
 Reference:
 

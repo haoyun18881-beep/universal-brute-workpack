@@ -24,8 +24,8 @@ Important sections:
 
 | Section | Purpose |
 | --- | --- |
-| `server` | SSE host and port. stdio does not need a port. |
-| `transport` | `stdio` or `sse`. |
+| `server` | HTTP host, port, and optional allowed origins. stdio does not need a port. |
+| `transport` | `stdio`, `streamable-http`, or `sse`. |
 | `roots` | Allowed file roots. `["*"]` means full filesystem access. |
 | `search.providers` | Exa, Tavily, and DuckDuckGo endpoints and key env names. |
 | `worker` | Local CPU worker pool controls for grep/analyze/diff. |
@@ -81,6 +81,39 @@ Launch with:
 
 ```bash
 npx -y universal-brute-workpack serve --stdio --profile admin_no_shell
+```
+
+## Streamable HTTP
+
+Use Streamable HTTP when a client or gateway expects a single HTTP MCP endpoint:
+
+```bash
+npx -y universal-brute-workpack serve --transport streamable-http --port 18890 --profile admin
+```
+
+Endpoints:
+
+| Endpoint | Purpose |
+| --- | --- |
+| `/mcp` | Streamable HTTP MCP JSON-RPC endpoint. |
+| `/health` | Local health and endpoint summary. |
+| `/.well-known/mcp/server-card.json` | Static server card for scanners. |
+| `/sse` | Legacy HTTP+SSE compatibility endpoint. |
+
+The server validates `Origin` headers to reduce local DNS rebinding risk. By default, localhost origins for the selected port are allowed. Add public or hosted origins through:
+
+```json
+{
+  "server": {
+    "allowedOrigins": ["https://example.com"]
+  }
+}
+```
+
+Or with env:
+
+```text
+UBW_ALLOWED_ORIGINS=https://example.com;https://another.example
 ```
 
 ## Worker Pool

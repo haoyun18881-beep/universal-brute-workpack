@@ -7,7 +7,7 @@
 
 Universal Brute Workpack is a full-capability, stdio-first Agent MCP workpack.
 
-It is meant to be usable by Codex, OpenClaw, Claude Desktop, Cursor, Cline, Continue, or any other MCP client that can speak SSE or stdio.
+It is meant to be usable by Codex, OpenClaw, Claude Desktop, Cursor, Cline, Continue, or any other MCP client that can speak stdio, Streamable HTTP, or legacy SSE.
 
 It turns an Agent client into a local-first workbench: files, CPU-parallel grep, rollback-aware patching, commands, web search fallback, memory recall fallback, and model-backed Agent tasks behind one MCP server.
 
@@ -50,7 +50,7 @@ The goal is not to replace the main Agent. The goal is to make one strong Agent 
 
 Available now:
 
-- Full-capability MCP tool bundle with stdio and SSE transports.
+- Full-capability MCP tool bundle with stdio, Streamable HTTP, and legacy SSE transports.
 - 26 neutral tools for search, fetch, file operations, code patching/review, commands, validation, memory search/recall, worker analyze/diff, audit chain, status, and Agent spawn/pipeline.
 - CPU-parallel `fs.grep` through a local worker pool. By default it uses available machine parallelism; set `UBW_WORKER_POOL_SIZE` only when you want to limit it.
 - `code.patch` uses exact replacements and rolls back JS-like files when `node --check` fails.
@@ -122,6 +122,18 @@ The plugin wrapper is manual for now. npm cannot automatically register a Codex 
 ## Registry Metadata
 
 The package includes draft-ready official MCP Registry metadata in `server.json` and `package.json#mcpName`. See `docs/distribution.md` for the registry, aggregator, Smithery, and Codex plugin-wrapper status before publishing a new release.
+
+## MCPB Bundle
+
+For the local stdio bundle route, UBW can stage, validate, and pack an MCPB directory:
+
+```bash
+npm run mcpb:stage
+npm run mcpb:validate
+npm run mcpb:pack
+```
+
+See `docs/mcpb.md`. This is separate from Smithery URL publishing, which still requires a public HTTPS Streamable HTTP endpoint.
 
 ## Optional Codex Skills
 
@@ -227,7 +239,17 @@ stdio, for MCP clients:
 npx -y universal-brute-workpack serve --stdio
 ```
 
-SSE, for clients that prefer a local server:
+Streamable HTTP, for clients or hosted gateways that need a single HTTP MCP endpoint:
+
+```bash
+npx -y universal-brute-workpack serve --transport streamable-http --port 18890 --profile admin
+```
+
+The MCP endpoint is `http://127.0.0.1:18890/mcp`. A static server card is exposed at `http://127.0.0.1:18890/.well-known/mcp/server-card.json`.
+
+For a Smithery URL publishing hosting recipe, see `docs/smithery-hosting.md`.
+
+Legacy SSE, for older clients that prefer a local server:
 
 ```bash
 npx -y universal-brute-workpack serve --transport sse --port 18890 --profile admin
@@ -245,7 +267,7 @@ For local development, copy `.env.example` to `.env`.
 
 ```text
 Agent Client
-  └─ MCP stdio/SSE
+  └─ MCP stdio / Streamable HTTP / legacy SSE
       └─ Universal Brute Workpack bridge
           ├─ local tools: fs/search/file/code/command/validate
           ├─ CPU worker pool: parallel grep and local bulk scans

@@ -1,10 +1,10 @@
 {
   "name": "universal-brute-workpack",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "mcpName": "io.github.haoyun18881-beep/universal-brute-workpack",
   "description": "Universal Brute Workpack — a full-capability stdio-first Agent MCP workpack with configurable tools, memory fallback, and Agent pipeline orchestration.",
-  "changelog": "0.1.4: adds host-mediated audit instructions, registry metadata, and public contact details.",
-  "changelogDetail": "audit.prepare now emits host-instructions.md and richer task paths for host-mediated worker dispatch; npm tarballs include server.json with package.json#mcpName for MCP Registry preparation; docs cover Registry, Smithery, aggregators, and contact details.",
+  "changelog": "0.1.5: fixes Codex Desktop stdio JSONL compatibility while preserving framed stdio support.",
+  "changelogDetail": "stdio transport now accepts newline-delimited JSON and Content-Length framed JSON, responds in the matching mode, suppresses JSON-RPC notifications, and handles batches consistently across stdio and Streamable HTTP. Smoke coverage now exercises JSONL, framed stdio, notifications, batches, and HTTP parse errors.",
   "type": "module",
   "main": "src/bridge.js",
   "bin": {
@@ -13,11 +13,16 @@
   "scripts": {
     "start": "node ./src/bridge.js",
     "start:sse": "node ./src/bridge.js serve --transport sse --port 18890 --profile admin",
+    "start:http": "node ./src/bridge.js serve --transport streamable-http --port 18890 --profile admin",
     "start:stdio": "node ./src/bridge.js serve --stdio --profile admin",
     "doctor": "node ./src/bridge.js doctor",
     "smoke": "node ./test/smoke.mjs",
+    "smoke:http": "node ./test/http-smoke.mjs",
     "smoke:host": "node ./test/host-mediated-smoke.mjs",
     "smoke:stdio": "node ./test/stdio-smoke.mjs",
+    "mcpb:stage": "node ./scripts/prepare-mcpb.mjs",
+    "mcpb:validate": "npm run mcpb:stage --silent && npx --yes @anthropic-ai/mcpb validate ./dist/mcpb/universal-brute-workpack",
+    "mcpb:pack": "npm run mcpb:stage --silent && npx --yes @anthropic-ai/mcpb pack ./dist/mcpb/universal-brute-workpack ./dist/mcpb/universal-brute-workpack.mcpb",
     "pack:dry": "npm pack --dry-run"
   },
   "license": "BUSL-1.1",
@@ -48,6 +53,7 @@
     "sidecar/",
     "config/",
     "docs/",
+    "scripts/",
     "examples/",
     "integrations/",
     "plugins/",
