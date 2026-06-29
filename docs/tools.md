@@ -95,3 +95,5 @@ Modes:
 ## Pipeline Direction
 
 The current package includes an OpenAI-compatible API pipeline with managed sidecar isolation and a host-mediated audit flow. In host-mediated mode, Universal Brute Workpack manages TaskCards, run directories, collector contracts, failure thresholds, and EvidenceBundles, while the host Agent decides how to create native subagents, threads, or review passes.
+
+For a step-by-step host-mediated workflow, see `docs/host-mediated.md`.

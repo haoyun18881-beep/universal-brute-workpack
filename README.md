@@ -119,6 +119,10 @@ There are two Codex integration layers:
 
 The plugin wrapper is manual for now. npm cannot automatically register a Codex plugin in every user's app, and official marketplace curation is not required for self-distribution. The wrapper is included so users can install it deliberately and understand that it points back to the npm MCP server.
 
+## Registry Metadata
+
+The package includes draft-ready official MCP Registry metadata in `server.json` and `package.json#mcpName`. See `docs/distribution.md` for the registry, aggregator, Smithery, and Codex plugin-wrapper status before publishing a new release.
+
 ## Optional Codex Skills
 
 Codex users can copy the lightweight companion skills so Codex loads short scenario guides instead of repeatedly reading the full UBW manual:
@@ -254,6 +258,8 @@ Agent Client
 
 See `docs/tools.md`.
 
+For the host-mediated audit flow, where the host Agent dispatches native workers and UBW owns the runDir, reports, collector, EvidenceBundle, and gate, see `docs/host-mediated.md`.
+
 ## Configuration
 
 See `docs/configuration.md` for provider keys, memory backends, profiles, deny lists, roots, and pipeline limits.
@@ -298,6 +304,7 @@ Issues and pull requests are welcome for bug fixes, docs, provider adapters, and
 npm install
 npm run doctor
 npm run smoke
+npm run smoke:host
 npm run smoke:stdio
 npm run pack:dry
 ```
@@ -309,7 +316,12 @@ node --check .\src\bridge.js
 node --check .\src\tools\core.js
 node --check .\sidecar\server.js
 npm run smoke
+npm run smoke:host
 npm run smoke:stdio
 npm run doctor
 npm run pack:dry
 ```
+
+## Contact
+
+For collaboration, licensing, or partnership inquiries, contact: haoyun18881@gmail.com

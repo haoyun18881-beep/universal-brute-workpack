@@ -1,9 +1,10 @@
 {
   "name": "universal-brute-workpack",
-  "version": "0.1.3",
+  "version": "0.1.4",
+  "mcpName": "io.github.haoyun18881-beep/universal-brute-workpack",
   "description": "Universal Brute Workpack — a full-capability stdio-first Agent MCP workpack with configurable tools, memory fallback, and Agent pipeline orchestration.",
-  "changelog": "0.1.3: ships the optional Codex plugin wrapper and marketplace files.",
-  "changelogDetail": "Includes .agents/plugins/marketplace.json and plugins/universal-brute-workpack so Codex users can install the wrapper from a marketplace while the wrapper launches the same npm MCP server through npx.",
+  "changelog": "0.1.4: adds host-mediated audit instructions, registry metadata, and public contact details.",
+  "changelogDetail": "audit.prepare now emits host-instructions.md and richer task paths for host-mediated worker dispatch; npm tarballs include server.json with package.json#mcpName for MCP Registry preparation; docs cover Registry, Smithery, aggregators, and contact details.",
   "type": "module",
   "main": "src/bridge.js",
   "bin": {
@@ -15,6 +16,7 @@
     "start:stdio": "node ./src/bridge.js serve --stdio --profile admin",
     "doctor": "node ./src/bridge.js doctor",
     "smoke": "node ./test/smoke.mjs",
+    "smoke:host": "node ./test/host-mediated-smoke.mjs",
     "smoke:stdio": "node ./test/stdio-smoke.mjs",
     "pack:dry": "npm pack --dry-run"
   },
@@ -53,6 +55,7 @@
     "test/",
     ".env.example",
     "README.md",
+    "server.json",
     "LICENSE"
   ],
   "dependencies": {}

@@ -95,6 +95,72 @@ function makeTaskCards(args = {}) {
   });
 }
 
+function tableCell(value) {
+  return String(value ?? '').replace(/\|/g, '\\|');
+}
+
+function hostInstructionsMarkdown(manifest) {
+  const tasks = manifest.tasks || [];
+  const taskRows = tasks.length
+    ? tasks.map((task) => `| ${tableCell(task.task_id)} | ${tableCell(task.title)} | ${tableCell(task.taskcard_path)} | ${tableCell(task.prompt_path)} | ${tableCell(task.report_path)} |`).join('\n')
+    : '| _none_ | _none_ | _none_ | _none_ | _none_ |';
+  return `# Host-Mediated Audit Run
+
+Run ID: ${manifest.run_id}
+
+This run is prepared for a host-mediated dispatch flow. UBW owns the runDir, taskcards, prompts, report ingestion, collection, and gate artifacts. The host Agent owns native subagent/thread creation and final judgment.
+
+## Flow
+
+1. Read each taskcard and prompt file listed below.
+2. Dispatch each prompt to a native host worker, subagent, thread, or review pass.
+3. Require each worker to return one compact JSON object that matches the report contract below.
+4. Ingest each worker output with \`audit.ingest_report\` using this \`runDir\`, the matching \`taskId\`, a \`workerId\`, a \`status\`, and the raw \`output\` string.
+5. Run \`audit.collect\` on this \`runDir\`.
+6. The main Agent must inspect \`gate.json\`, sample the recommended raw reports, and accept or reject findings before expanding the batch.
+
+## Tasks
+
+| task_id | title | taskcard | prompt | expected report |
+| --- | --- | --- | --- | --- |
+${taskRows}
+
+## Report Contract
+
+\`\`\`json
+{
+  "task_id": "string",
+  "status": "completed|blocked|failed",
+  "findings": [
+    {
+      "finding_id": "string",
+      "severity": "critical|high|medium|low|info",
+      "category": "string",
+      "claim": "short factual claim",
+      "evidence_paths": ["path or source id"],
+      "confidence": 0.0,
+      "needs_main_review": true
+    }
+  ],
+  "sensitive_scan_result": "none-found|redacted|not-applicable",
+  "read_status": "complete|partial|not-applicable",
+  "evidence_paths_read": ["path"],
+  "evidence_paths_not_read": ["path"],
+  "not_inspected": ["scope"],
+  "notes": "short optional note"
+}
+\`\`\`
+
+Do not output secrets, keys, tokens, cookies, Authorization headers, Bearer strings, passwords, private keys, or full private config values. If a worker sees sensitive material, it should report only the category, location, and handling action.
+
+## Gate Rules
+
+- Missing, failed, blocked, unknown, or unparsable reports count against the failure threshold.
+- If the collector blocks expansion, do not increase fan-out; inspect the failed reports and rerun a smaller or clearer batch.
+- If the collector allows expansion, the main Agent still samples raw reports before accepting findings.
+`;
+}
+
 export function createAuditRun(args = {}, context) {
   const runId = safeId(args.runId || `audit-${nowStamp()}-${randomUUID().slice(0, 8)}`, `audit-${randomUUID().slice(0, 8)}`);
   const runDir = args.runDir
@@ -108,6 +174,7 @@ export function createAuditRun(args = {}, context) {
   const promptDir = join(runDir, 'prompts');
   const reportDir = join(runDir, 'reports');
   const resultDir = join(runDir, 'results');
+  const hostInstructionsPath = join(runDir, 'host-instructions.md');
   mkdirSync(taskcardDir, { recursive: true });
   mkdirSync(promptDir, { recursive: true });
   mkdirSync(reportDir, { recursive: true });
@@ -122,6 +189,7 @@ export function createAuditRun(args = {}, context) {
     prompt_dir: promptDir,
     report_dir: reportDir,
     result_dir: resultDir,
+    host_instructions_path: hostInstructionsPath,
     model: args.model || '',
     max_tasks: args.maxTasks || null,
     concurrency: args.concurrency || null,
@@ -148,6 +216,7 @@ export function createAuditRun(args = {}, context) {
     writeJson(join(taskcardDir, `${card.task_id}.json`), card);
     writeFileSync(join(promptDir, `${card.task_id}.txt`), truncate(pipelineTask.prompt, Number(args.maxPromptChars || 20000)), 'utf-8');
   });
+  writeFileSync(hostInstructionsPath, hostInstructionsMarkdown(manifest), 'utf-8');
   return {
     runId,
     runDir,
@@ -160,6 +229,7 @@ export function createAuditRun(args = {}, context) {
       prompts: promptDir,
       reports: reportDir,
       results: resultDir,
+      hostInstructions: hostInstructionsPath,
       evidenceBundle: join(runDir, 'evidence-bundle.json'),
       collectorSummary: join(runDir, 'collector-summary.json'),
       gate: join(runDir, 'gate.json'),

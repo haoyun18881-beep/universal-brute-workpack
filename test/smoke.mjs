@@ -97,6 +97,13 @@ try {
   });
   assert(!audit.error, audit.error?.message);
   const auditText = JSON.parse(audit.result.content[0].text);
+  assert(auditText.paths.hostInstructions.endsWith('host-instructions.md'));
+  assert.equal(auditText.taskcards[0].taskcard_path.endsWith('task-001.json'), true);
+  assert.equal(auditText.taskcards[0].report_path.endsWith('task-001.json'), true);
+  const hostInstructions = readFileSync(auditText.paths.hostInstructions, 'utf-8');
+  assert(hostInstructions.includes('audit.ingest_report'));
+  assert(hostInstructions.includes('audit.collect'));
+  assert(hostInstructions.includes('task-001'));
   const ingest = await rpc('tools/call', {
     name: 'audit.ingest_report',
     arguments: {

@@ -663,7 +663,19 @@ export function buildTools(context) {
         runDir: run.runDir,
         task_count: run.taskCards.length,
         paths: run.paths,
-        taskcards: run.taskCards.map((task) => ({ task_id: task.task_id, title: task.title, prompt_path: `${run.paths.prompts}\\${task.task_id}.txt` })),
+        host_instructions_path: run.paths.hostInstructions,
+        next_actions: [
+          'Read host-instructions.md and dispatch each prompt through native host workers or subagents.',
+          'Ingest each worker output with audit.ingest_report.',
+          'Run audit.collect and sample the gate-recommended raw reports before accepting findings.',
+        ],
+        taskcards: run.manifest.tasks.map((task) => ({
+          task_id: task.task_id,
+          title: task.title,
+          taskcard_path: task.taskcard_path,
+          prompt_path: task.prompt_path,
+          report_path: task.report_path,
+        })),
       }, context);
     }),
     tool('audit.ingest_report', 'Ingest one host-mediated worker report into an audit runDir.', {
