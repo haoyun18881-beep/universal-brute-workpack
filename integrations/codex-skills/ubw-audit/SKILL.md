@@ -5,13 +5,13 @@ description: Use Universal Brute Workpack for TaskCard, runDir, report ingestion
 
 # UBW Audit
 
-Use the `universal_brute_workpack` MCP server when available.
+Use the `ubw` MCP server when available.
 
 Preferred tools:
 
-- `audit.prepare` to create a TaskCard/runDir scaffold.
-- `audit.run` for UBW-managed audit execution.
-- `audit.ingest_report` to add host-mediated or external agent reports.
+- `audit.prepare` to create TaskCards, runDir, prompt files, and report dropbox for host-mediated work.
+- `audit.ingest_report` to add Codex native subagent, external agent, or human worker reports.
 - `audit.collect` to produce collector output, EvidenceBundle, and gate artifacts.
+- `audit.run` for UBW-managed API-backed audit execution when the task contract explicitly wants external model workers.
 
-Treat weak-agent reports as candidate findings only. Main-thread review owns final conclusions and any real file changes.
+Use this as the default UBW route for multi-agent evidence. Host-mediated mode means UBW owns the task cards and evidence ledger while Codex, another host, or a human does the work. API-backed mode means UBW calls configured OpenAI-compatible workers such as DeepSeek. Treat weak/API-agent reports as candidate findings only. Main-thread review owns final conclusions and any real file changes.

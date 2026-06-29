@@ -10,9 +10,25 @@ const root = mkdtempSync(join(tmpdir(), 'universal-brute-workpack-'));
 const port = 18990 + Math.floor(Math.random() * 1000);
 
 function startServer() {
+  const childEnv = { ...process.env, UBW_ROOTS: '*' };
+  for (const key of [
+    'LLM_BASE_URL',
+    'OPENAI_BASE_URL',
+    'LLM_API_KEY',
+    'OPENAI_API_KEY',
+    'LLM_MODEL',
+    'OPENAI_MODEL',
+    'DEEPSEEK_API_KEY',
+    'DEEPSEEK_SUB_API_KEY',
+    'DEEPSEEK_BASE_URL',
+    'DEEPSEEK_MODEL',
+    'ANTHROPIC_API_KEY',
+  ]) {
+    delete childEnv[key];
+  }
   return spawn(process.execPath, ['./src/bridge.js', 'serve', '--transport', 'sse', '--port', String(port), '--profile', 'admin'], {
     cwd: repoRoot,
-    env: { ...process.env, UBW_ROOTS: '*' },
+    env: childEnv,
     stdio: ['ignore', 'ignore', 'pipe'],
   });
 }

@@ -1,7 +1,7 @@
 {
   "name": "universal-brute-workpack",
-  "version": "0.1.5",
-  "description": "Universal Brute Workpack Codex wrapper for the npm MCP workpack.",
+  "version": "0.1.6",
+  "description": "Universal Brute Workpack Codex wrapper for companion skills.",
   "author": {
     "name": "Yupeng Zhou",
     "url": "https://github.com/haoyun18881-beep/universal-brute-workpack"
@@ -19,12 +19,11 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Universal Brute Workpack",
-    "shortDescription": "Full-capability Agent MCP workpack.",
-    "longDescription": "Universal Brute Workpack adds a stdio-first MCP tool bundle for local files, CPU-parallel grep, commands, validation, memory fallback, audit runs, and Agent pipelines. This Codex wrapper points to the npm package and includes lightweight companion skills.",
+    "shortDescription": "Companion skills for the UBW MCP workpack.",
+    "longDescription": "Universal Brute Workpack adds a stdio-first MCP tool bundle for local files, CPU-parallel grep, commands, validation, memory fallback, audit runs, and Agent pipelines. This Codex wrapper ships lightweight companion skills; register the MCP server once through top-level Codex config as mcp_servers.ubw.",
     "developerName": "Yupeng Zhou",
     "category": "Productivity",
     "capabilities": [
-      "MCP",
       "Files",
       "Search",
       "Code",

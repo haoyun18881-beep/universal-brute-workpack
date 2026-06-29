@@ -80,7 +80,7 @@ To keep full capability except shell execution:
 Launch with:
 
 ```bash
-npx -y universal-brute-workpack serve --stdio --profile admin_no_shell
+npx -y universal-brute-workpack@0.1.6 serve --stdio --profile admin_no_shell
 ```
 
 ## Streamable HTTP
@@ -88,7 +88,7 @@ npx -y universal-brute-workpack serve --stdio --profile admin_no_shell
 Use Streamable HTTP when a client or gateway expects a single HTTP MCP endpoint:
 
 ```bash
-npx -y universal-brute-workpack serve --transport streamable-http --port 18890 --profile admin
+npx -y universal-brute-workpack@0.1.6 serve --transport streamable-http --port 18890 --profile admin
 ```
 
 Endpoints:

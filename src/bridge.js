@@ -8,7 +8,7 @@ import { redact } from './lib/redact.js';
 import { createAgentAdapter } from './lib/agent-adapter.js';
 import { runDoctor } from './lib/doctor.js';
 
-const SERVER_INFO = { name: 'universal-brute-workpack', title: 'Universal Brute Workpack', version: '0.1.5' };
+const SERVER_INFO = { name: 'universal-brute-workpack', title: 'Universal Brute Workpack', version: '0.1.6' };
 const MCP_PROTOCOL_VERSION = '2025-11-25';
 const DEFAULT_HTTP_PROTOCOL_VERSION = '2025-03-26';
 const SUPPORTED_HTTP_PROTOCOL_VERSIONS = new Set(['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25']);

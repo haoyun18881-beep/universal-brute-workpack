@@ -1,2 +1,2 @@
-[mcp_servers.universal_brute_workpack]
+[mcp_servers.ubw]
 url = "http://127.0.0.1:18890/sse"

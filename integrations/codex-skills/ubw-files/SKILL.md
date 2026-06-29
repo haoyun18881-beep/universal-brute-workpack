@@ -5,7 +5,7 @@ description: Use Universal Brute Workpack for local file discovery, CPU-parallel
 
 # UBW Files
 
-Use the `universal_brute_workpack` MCP server when available.
+Use the `ubw` MCP server when available.
 
 Preferred tools:
 
@@ -16,4 +16,4 @@ Preferred tools:
 - `worker.analyze` or `worker.diff` for bulk local analysis or file comparison.
 - `worker.status` when worker capacity or state matters.
 
-Search first, then read only the files needed for the task. Keep results short and path-grounded.
+Prefer UBW here for large trees, CPU-parallel grep, worker analysis, portable MCP file access, or hash/diff style comparisons. For tiny Codex-local reads, native file tools are fine. Search first, then read only the files needed for the task. Keep results short and path-grounded.

@@ -5,7 +5,7 @@ description: Use Universal Brute Workpack for direct file writes, copies, moves,
 
 # UBW Edit
 
-Use the `universal_brute_workpack` MCP server when available.
+Use the `ubw` MCP server when available.
 
 Preferred tools:
 
@@ -14,4 +14,4 @@ Preferred tools:
 - `file.move` for moving or renaming files inside allowed roots.
 - `code.patch` for patch-style source edits.
 
-Read the target first unless the task is creating a new file. After edits, run the smallest useful validation through `ubw-code` or normal local checks.
+Read the target first unless the task is creating a new file. File writes, copies, moves, and patches must follow the current task contract and write scope; tool availability is not permission to edit unrelated paths. After edits, run the smallest useful validation through `ubw-code` or normal local checks.

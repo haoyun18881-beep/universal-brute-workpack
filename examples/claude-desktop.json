@@ -1,10 +1,10 @@
 {
   "mcpServers": {
-    "universal-brute-workpack": {
+    "ubw": {
       "command": "npx",
       "args": [
         "-y",
-        "universal-brute-workpack",
+        "universal-brute-workpack@0.1.6",
         "serve",
         "--stdio"
       ]

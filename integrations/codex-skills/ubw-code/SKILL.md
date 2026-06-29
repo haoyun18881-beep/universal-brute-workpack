@@ -5,7 +5,7 @@ description: Use Universal Brute Workpack for code review, code patch verificati
 
 # UBW Code
 
-Use the `universal_brute_workpack` MCP server when available.
+Use the `ubw` MCP server when available.
 
 Preferred tools:
 
@@ -13,6 +13,6 @@ Preferred tools:
 - `validate.check` for syntax or command-style validation.
 - `validate.load` for static module/package inspection; do not treat it as proof of runtime behavior.
 - `validate.diff` for git diff summaries.
-- `command.exec` for explicit test, build, lint, or diagnostic commands.
+- `command.exec` for explicit, bounded, reproducible test/build/lint/diagnostic commands through UBW profile, roots, cwd, timeout, and runDir context.
 
-Lead with findings for reviews. For implementation work, validate the changed surface and report anything not run.
+In Codex Desktop, native shell is still fine for ordinary local commands. Prefer UBW `command.exec` when the task needs portable MCP behavior, UBW profile/roots, host-mediated audit records, or compatibility with non-Codex clients. Lead with findings for reviews. For implementation work, validate the changed surface and report anything not run.

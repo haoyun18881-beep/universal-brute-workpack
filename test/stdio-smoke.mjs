@@ -103,9 +103,24 @@ async function batch(child, next, mode, messages) {
 
 async function runScenario(mode) {
   const root = mkdtempSync(join(tmpdir(), `ubw-stdio-${mode}-`));
+  const childEnv = { ...process.env, UBW_ROOTS: '*', UBW_PROFILE: 'admin' };
+  for (const key of [
+    'LLM_BASE_URL',
+    'OPENAI_BASE_URL',
+    'LLM_API_KEY',
+    'OPENAI_API_KEY',
+    'LLM_MODEL',
+    'DEEPSEEK_API_KEY',
+    'DEEPSEEK_SUB_API_KEY',
+    'DEEPSEEK_BASE_URL',
+    'DEEPSEEK_MODEL',
+    'ANTHROPIC_API_KEY',
+  ]) {
+    delete childEnv[key];
+  }
   const child = spawn(process.execPath, ['./src/bridge.js'], {
     cwd: repoRoot,
-    env: { ...process.env, UBW_ROOTS: '*', UBW_PROFILE: 'admin' },
+    env: childEnv,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
 

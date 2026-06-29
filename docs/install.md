@@ -7,9 +7,9 @@ Universal Brute Workpack is stdio-first. Most MCP clients can auto-start it with
 Direct MCP setup:
 
 ```toml
-[mcp_servers.universal_brute_workpack]
+[mcp_servers.ubw]
 command = "npx"
-args = ["-y", "universal-brute-workpack", "serve", "--stdio"]
+args = ["-y", "universal-brute-workpack@0.1.6", "serve", "--stdio", "--profile", "admin"]
 ```
 
 This gives Codex the UBW tools, but it does not make UBW appear as a plugin card or `@` plugin entry.
@@ -21,9 +21,9 @@ codex plugin marketplace add <path-or-repo-root-containing-.agents/plugins/marke
 codex plugin add universal-brute-workpack@universal-brute-workpack
 ```
 
-The wrapper is declared in `.agents/plugins/marketplace.json` and lives at `plugins/universal-brute-workpack/`. It launches the same npm MCP server with `npx universal-brute-workpack@0.1.5 serve --stdio --profile admin` and includes the companion skills.
+The wrapper is declared in `.agents/plugins/marketplace.json` and lives at `plugins/universal-brute-workpack/`. It is skills-only and does not register a second MCP server; keep one top-level Codex MCP registration under `mcp_servers.ubw`.
 
-Important: this plugin layer is manual. npm install or `npx` does not automatically register a Codex plugin for every user, and official marketplace curation is not required for self-distribution. If your Codex build exposes plugin installation through the app UI instead of the CLI, add this repository marketplace there. After installing or enabling the wrapper in Codex, start a new thread before expecting `@Universal Brute Workpack` or the MCP tools to appear.
+Important: this plugin layer is manual. npm install or `npx` does not automatically register a Codex plugin for every user, and official marketplace curation is not required for self-distribution. If your Codex build exposes plugin installation through the app UI instead of the CLI, add this repository marketplace there. After installing or enabling the wrapper in Codex, start a new thread before expecting `@Universal Brute Workpack` to appear.
 
 ## Registry Metadata
 
@@ -99,12 +99,12 @@ UBW_AGENT_TASK_TIMEOUT_MS=300000
 ## First-Run Verify
 
 ```bash
-npx -y universal-brute-workpack doctor
+npx -y universal-brute-workpack@0.1.6 doctor
 ```
 
 Healthy first run should show:
 
-- `version: "0.1.5"`
+- `version: "0.1.6"`
 - `tools.count: 26`
 - `profile: "admin"` unless you selected another profile
 - `worker_pool.enabled: true`
@@ -123,7 +123,7 @@ Change License: Apache License v2.0. Change Date: 2030-06-29.
 Streamable HTTP is available for clients or hosted gateways that need a single HTTP MCP endpoint:
 
 ```powershell
-npx -y universal-brute-workpack serve --transport streamable-http --port 18890 --profile admin
+npx -y universal-brute-workpack@0.1.6 serve --transport streamable-http --port 18890 --profile admin
 ```
 
 The MCP endpoint is:
@@ -145,5 +145,5 @@ For a Smithery URL publishing hosting recipe, see `docs/smithery-hosting.md`.
 SSE is optional for clients that prefer a long-running local service:
 
 ```powershell
-npx -y universal-brute-workpack serve --transport sse --port 18890 --profile admin
+npx -y universal-brute-workpack@0.1.6 serve --transport sse --port 18890 --profile admin
 ```

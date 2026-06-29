@@ -77,9 +77,9 @@ Most MCP clients can auto-start the workpack with `npx`:
 ```json
 {
   "mcpServers": {
-    "universal-brute-workpack": {
+    "ubw": {
       "command": "npx",
-      "args": ["-y", "universal-brute-workpack", "serve", "--stdio"]
+      "args": ["-y", "universal-brute-workpack@0.1.6", "serve", "--stdio"]
     }
   }
 }
@@ -88,9 +88,9 @@ Most MCP clients can auto-start the workpack with `npx`:
 For Codex:
 
 ```toml
-[mcp_servers.universal_brute_workpack]
+[mcp_servers.ubw]
 command = "npx"
-args = ["-y", "universal-brute-workpack", "serve", "--stdio"]
+args = ["-y", "universal-brute-workpack@0.1.6", "serve", "--stdio", "--profile", "admin"]
 ```
 
 This direct MCP setup gives Codex the tools, but it does not make UBW appear in Codex's plugin browser or `@` plugin picker.
@@ -102,7 +102,7 @@ codex plugin marketplace add <path-or-repo-root-containing-.agents/plugins/marke
 codex plugin add universal-brute-workpack@universal-brute-workpack
 ```
 
-That wrapper still launches the npm package with `npx`; it is a Codex-facing shell around the same MCP server. If your Codex build exposes plugin installation through the app UI instead of the CLI, add this repository marketplace there, install the wrapper, then start a new thread before `@Universal Brute Workpack` and its MCP tools are visible.
+That wrapper is skills-only; register the MCP server once in top-level Codex config as `mcp_servers.ubw`. If your Codex build exposes plugin installation through the app UI instead of the CLI, add this repository marketplace there, install the wrapper, then start a new thread before `@Universal Brute Workpack` is visible.
 
 No API key is required for first run. File tools, command execution, validation, DuckDuckGo fallback search, and local keyword memory search work out of the box.
 
@@ -114,10 +114,10 @@ There are two Codex integration layers:
 
 | Layer | What It Does | Install Path |
 | --- | --- | --- |
-| MCP server | Gives Codex the actual UBW tools through `npx universal-brute-workpack serve --stdio`. | Add `[mcp_servers.universal_brute_workpack]` to Codex config. |
-| Codex plugin wrapper | Makes UBW show as a Codex plugin and bundles the companion skills. | Add this repository marketplace, then install from `.agents/plugins/marketplace.json`. |
+| MCP server | Gives Codex the actual UBW tools through `npx universal-brute-workpack@0.1.6 serve --stdio --profile admin`. | Add `[mcp_servers.ubw]` to Codex config. |
+| Codex plugin wrapper | Makes UBW show as a Codex plugin and bundles the companion skills. It does not register a second MCP server. | Add this repository marketplace, then install from `.agents/plugins/marketplace.json`. |
 
-The plugin wrapper is manual for now. npm cannot automatically register a Codex plugin in every user's app, and official marketplace curation is not required for self-distribution. The wrapper is included so users can install it deliberately and understand that it points back to the npm MCP server.
+The plugin wrapper is manual for now. npm cannot automatically register a Codex plugin in every user's app, and official marketplace curation is not required for self-distribution. The wrapper is included so users can install the companion skills deliberately while keeping the MCP server registered once in top-level config.
 
 ## Registry Metadata
 
@@ -236,13 +236,13 @@ If no LLM endpoint is configured, Agent tasks return `not_configured` instead of
 stdio, for MCP clients:
 
 ```bash
-npx -y universal-brute-workpack serve --stdio
+npx -y universal-brute-workpack@0.1.6 serve --stdio
 ```
 
 Streamable HTTP, for clients or hosted gateways that need a single HTTP MCP endpoint:
 
 ```bash
-npx -y universal-brute-workpack serve --transport streamable-http --port 18890 --profile admin
+npx -y universal-brute-workpack@0.1.6 serve --transport streamable-http --port 18890 --profile admin
 ```
 
 The MCP endpoint is `http://127.0.0.1:18890/mcp`. A static server card is exposed at `http://127.0.0.1:18890/.well-known/mcp/server-card.json`.
@@ -252,13 +252,13 @@ For a Smithery URL publishing hosting recipe, see `docs/smithery-hosting.md`.
 Legacy SSE, for older clients that prefer a local server:
 
 ```bash
-npx -y universal-brute-workpack serve --transport sse --port 18890 --profile admin
+npx -y universal-brute-workpack@0.1.6 serve --transport sse --port 18890 --profile admin
 ```
 
 Doctor:
 
 ```bash
-npx -y universal-brute-workpack doctor
+npx -y universal-brute-workpack@0.1.6 doctor
 ```
 
 For local development, copy `.env.example` to `.env`.

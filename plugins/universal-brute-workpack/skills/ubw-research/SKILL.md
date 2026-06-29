@@ -5,7 +5,7 @@ description: Use Universal Brute Workpack for web research, page fetching, memor
 
 # UBW Research
 
-Use the `universal_brute_workpack` MCP server when available.
+Use the `ubw` MCP server when available.
 
 Preferred tools:
 
@@ -14,4 +14,4 @@ Preferred tools:
 - `memory.search` for local/vector memory lookup.
 - `memory.recall` for prior evidence or conversation recall.
 
-Keep outputs sourced and compact. Do not paste secrets, tokens, cookies, or full private config values. If the UBW server is unavailable, say that and use the normal available research path.
+Keep outputs sourced and compact. UBW memory fallback is a general evidence path; use project-specific memory skills when the task specifically depends on OpenClaw or another named memory source. Do not paste secrets, tokens, cookies, or full private config values. If the UBW server is unavailable, say that and use the normal available research path.
