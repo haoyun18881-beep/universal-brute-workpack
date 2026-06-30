@@ -72,28 +72,50 @@ Proven pattern / current portable base:
 
 ## Quick Start
 
-Most MCP clients can auto-start the workpack with `npx`:
+For Codex, run the installer once:
+
+```bash
+npx -y universal-brute-workpack@0.1.7 install codex
+```
+
+Then restart Codex. The installer copies UBW into a stable local version path, backs up `~/.codex/config.toml`, replaces `mcp_servers.ubw`, and makes Codex run `node .../src/bridge.js` directly instead of keeping `npx` in the daily MCP process tree.
+
+Verify the local Codex registration with:
+
+```bash
+npx -y universal-brute-workpack@0.1.7 doctor --codex
+```
+
+Rollback the Codex config backup with:
+
+```bash
+npx -y universal-brute-workpack@0.1.7 rollback codex
+```
+
+Other MCP clients can auto-start the workpack with `npx`:
 
 ```json
 {
   "mcpServers": {
     "ubw": {
       "command": "npx",
-      "args": ["-y", "universal-brute-workpack@0.1.6", "serve", "--stdio"]
+      "args": ["-y", "universal-brute-workpack@0.1.7", "serve", "--stdio"]
     }
   }
 }
 ```
 
-For Codex:
+Manual Codex config is still available as an advanced fallback:
 
 ```toml
 [mcp_servers.ubw]
 command = "npx"
-args = ["-y", "universal-brute-workpack@0.1.6", "serve", "--stdio", "--profile", "admin"]
+args = ["-y", "universal-brute-workpack@0.1.7", "serve", "--stdio", "--profile", "admin"]
 ```
 
-This direct MCP setup gives Codex the tools, but it does not make UBW appear in Codex's plugin browser or `@` plugin picker.
+The one-command installer is preferred for Codex because it writes a stable local `node .../src/bridge.js` registration and avoids an extra `npx` Node process per UBW MCP instance.
+
+The MCP setup gives Codex the tools, but it does not make UBW appear in Codex's plugin browser or `@` plugin picker.
 
 If you want the plugin UI experience, install the optional Codex plugin wrapper from this repository's marketplace. This does not require official marketplace curation; a user can add this repository marketplace directly:
 
@@ -114,10 +136,10 @@ There are two Codex integration layers:
 
 | Layer | What It Does | Install Path |
 | --- | --- | --- |
-| MCP server | Gives Codex the actual UBW tools through `npx universal-brute-workpack@0.1.6 serve --stdio --profile admin`. | Add `[mcp_servers.ubw]` to Codex config. |
+| MCP server | Gives Codex the actual UBW tools through a stable local `node .../src/bridge.js` command. | Run `npx -y universal-brute-workpack@0.1.7 install codex`. |
 | Codex plugin wrapper | Makes UBW show as a Codex plugin and bundles the companion skills. It does not register a second MCP server. | Add this repository marketplace, then install from `.agents/plugins/marketplace.json`. |
 
-The plugin wrapper is manual for now. npm cannot automatically register a Codex plugin in every user's app, and official marketplace curation is not required for self-distribution. The wrapper is included so users can install the companion skills deliberately while keeping the MCP server registered once in top-level config.
+The plugin wrapper is manual for now. npm cannot automatically register a Codex plugin in every user's app, and official marketplace curation is not required for self-distribution. The wrapper is included so users can install the companion skills deliberately while keeping the MCP server registered once in top-level config. The `install codex` command handles the MCP server registration; the plugin wrapper is only for plugin UI and skills.
 
 ## Registry Metadata
 
@@ -236,13 +258,13 @@ If no LLM endpoint is configured, Agent tasks return `not_configured` instead of
 stdio, for MCP clients:
 
 ```bash
-npx -y universal-brute-workpack@0.1.6 serve --stdio
+npx -y universal-brute-workpack@0.1.7 serve --stdio
 ```
 
 Streamable HTTP, for clients or hosted gateways that need a single HTTP MCP endpoint:
 
 ```bash
-npx -y universal-brute-workpack@0.1.6 serve --transport streamable-http --port 18890 --profile admin
+npx -y universal-brute-workpack@0.1.7 serve --transport streamable-http --port 18890 --profile admin
 ```
 
 The MCP endpoint is `http://127.0.0.1:18890/mcp`. A static server card is exposed at `http://127.0.0.1:18890/.well-known/mcp/server-card.json`.
@@ -252,13 +274,13 @@ For a Smithery URL publishing hosting recipe, see `docs/smithery-hosting.md`.
 Legacy SSE, for older clients that prefer a local server:
 
 ```bash
-npx -y universal-brute-workpack@0.1.6 serve --transport sse --port 18890 --profile admin
+npx -y universal-brute-workpack@0.1.7 serve --transport sse --port 18890 --profile admin
 ```
 
 Doctor:
 
 ```bash
-npx -y universal-brute-workpack@0.1.6 doctor
+npx -y universal-brute-workpack@0.1.7 doctor
 ```
 
 For local development, copy `.env.example` to `.env`.

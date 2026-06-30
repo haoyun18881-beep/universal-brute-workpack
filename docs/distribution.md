@@ -1,9 +1,15 @@
 # Distribution Metadata
 
-Universal Brute Workpack remains stdio-first. The default user path is still:
+Universal Brute Workpack remains stdio-first. The default Codex user path is:
 
 ```bash
-npx -y universal-brute-workpack@0.1.6 serve --stdio
+npx -y universal-brute-workpack@0.1.7 install codex
+```
+
+Other MCP clients can keep the direct stdio path:
+
+```bash
+npx -y universal-brute-workpack@0.1.7 serve --stdio
 ```
 
 This document tracks registry and marketplace preparation. It is metadata only; publishing to any registry still requires an explicit release step.
@@ -59,7 +65,7 @@ Smithery has two relevant paths:
 UBW now ships a local Streamable HTTP transport in addition to stdio and legacy SSE:
 
 ```bash
-npx -y universal-brute-workpack@0.1.6 serve --transport streamable-http --port 18890 --profile admin
+npx -y universal-brute-workpack@0.1.7 serve --transport streamable-http --port 18890 --profile admin
 ```
 
 Local endpoints:

@@ -5,7 +5,7 @@ This document is a package-side hosting recipe for Smithery URL publishing. It d
 Smithery URL publishing expects a public HTTPS MCP URL that speaks Streamable HTTP. Universal Brute Workpack exposes that endpoint at `/mcp`:
 
 ```bash
-npx -y universal-brute-workpack@0.1.6 serve --transport streamable-http --host 0.0.0.0 --port 18890 --profile readonly
+npx -y universal-brute-workpack@0.1.7 serve --transport streamable-http --host 0.0.0.0 --port 18890 --profile readonly
 ```
 
 For a public URL, publish the HTTPS endpoint that maps to:
@@ -35,7 +35,7 @@ Create the root directory during host startup:
 
 ```bash
 mkdir -p /tmp/ubw-public-root
-npx -y universal-brute-workpack@0.1.6 serve --transport streamable-http --host 0.0.0.0 --port "${PORT:-18890}" --profile readonly
+npx -y universal-brute-workpack@0.1.7 serve --transport streamable-http --host 0.0.0.0 --port "${PORT:-18890}" --profile readonly
 ```
 
 `readonly` keeps the hosted surface to search, fetch, file read/list/search inside configured roots, review, validation, memory fallback, worker analyze/diff, and status-like checks. It blocks file writes, shell execution, and Agent spawning.

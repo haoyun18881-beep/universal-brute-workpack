@@ -7,8 +7,10 @@ import { buildTools } from './tools/core.js';
 import { redact } from './lib/redact.js';
 import { createAgentAdapter } from './lib/agent-adapter.js';
 import { runDoctor } from './lib/doctor.js';
+import { runCodexInstall, runCodexRollback } from './lib/codex-installer.js';
+import { PACKAGE_NAME, PACKAGE_VERSION, SERVER_TITLE } from './lib/version.js';
 
-const SERVER_INFO = { name: 'universal-brute-workpack', title: 'Universal Brute Workpack', version: '0.1.6' };
+const SERVER_INFO = { name: PACKAGE_NAME, title: SERVER_TITLE, version: PACKAGE_VERSION };
 const MCP_PROTOCOL_VERSION = '2025-11-25';
 const DEFAULT_HTTP_PROTOCOL_VERSION = '2025-03-26';
 const SUPPORTED_HTTP_PROTOCOL_VERSIONS = new Set(['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25']);
@@ -343,11 +345,55 @@ function startStdio(config) {
   });
 }
 
+function wantsJson(args) {
+  return args.json === true || args.json === 'true' || args.json === '1';
+}
+
+function printActionResult(result, args) {
+  if (wantsJson(args)) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+  if (!result.ok) {
+    console.error(`${result.action || 'action'} failed: ${result.error || 'unknown error'}`);
+    if (result.codexConfigPath) console.error(`Codex config: ${result.codexConfigPath}`);
+    process.exitCode = 1;
+    return;
+  }
+  const dry = String(result.action || '').includes('dry-run') ? ' dry run' : '';
+  console.log(`Universal Brute Workpack ${result.action}${dry ? '' : ' complete'}.`);
+  if (result.codexConfigPath) console.log(`Codex config: ${result.codexConfigPath}`);
+  if (result.installDir) console.log(`Install dir: ${result.installDir}`);
+  if (result.bridge) console.log(`Bridge: ${result.bridge}`);
+  if (result.backupPath) console.log(`Backup: ${result.backupPath}`);
+  if (result.restartRequired) console.log('Restart Codex before expecting the changed MCP registration to load.');
+  if (result.action?.startsWith('install-codex')) {
+    console.log(`Verify: npx -y ${PACKAGE_NAME}@${PACKAGE_VERSION} doctor --codex`);
+    console.log(`Rollback: npx -y ${PACKAGE_NAME}@${PACKAGE_VERSION} rollback codex`);
+  }
+}
+
 async function main() {
   const args = parseArgs();
+  if (args.command === 'install') {
+    const target = args.target || args.positionals?.[0] || 'codex';
+    if (target !== 'codex') throw new Error(`unknown install target: ${target}`);
+    printActionResult(runCodexInstall(args), args);
+    return;
+  }
+  if (args.command === 'rollback') {
+    const target = args.target || args.positionals?.[0] || 'codex';
+    if (target !== 'codex') throw new Error(`unknown rollback target: ${target}`);
+    printActionResult(runCodexRollback(args), args);
+    return;
+  }
+  if (args.command === 'doctor' && args.codex && (args.fix || args.autofix)) {
+    printActionResult(runCodexInstall(args), args);
+    return;
+  }
   const config = loadConfig(args);
   if (args.command === 'doctor') {
-    console.log(JSON.stringify(await runDoctor(config), null, 2));
+    console.log(JSON.stringify(await runDoctor(config, args), null, 2));
     return;
   }
   if (args.command !== 'serve' && args.command !== 'mcp') throw new Error(`unknown command: ${args.command}`);

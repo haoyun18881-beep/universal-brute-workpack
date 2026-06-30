@@ -43,7 +43,7 @@ function normalizeTransport(value) {
 }
 
 export function parseArgs(argv = process.argv.slice(2)) {
-  const out = { command: 'serve' };
+  const out = { command: 'serve', positionals: [] };
   let commandSet = false;
   for (let i = 0; i < argv.length; i += 1) {
     const item = argv[i];
@@ -51,6 +51,9 @@ export function parseArgs(argv = process.argv.slice(2)) {
       if (!commandSet) {
         out.command = item;
         commandSet = true;
+      } else {
+        out.positionals.push(item);
+        if (!out.target) out.target = item;
       }
       continue;
     }

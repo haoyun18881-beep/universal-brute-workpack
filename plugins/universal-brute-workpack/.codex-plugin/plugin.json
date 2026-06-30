@@ -1,6 +1,6 @@
 {
   "name": "universal-brute-workpack",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Universal Brute Workpack Codex wrapper for companion skills.",
   "author": {
     "name": "Yupeng Zhou",
@@ -20,7 +20,7 @@
   "interface": {
     "displayName": "Universal Brute Workpack",
     "shortDescription": "Companion skills for the UBW MCP workpack.",
-    "longDescription": "Universal Brute Workpack adds a stdio-first MCP tool bundle for local files, CPU-parallel grep, commands, validation, memory fallback, audit runs, and Agent pipelines. This Codex wrapper ships lightweight companion skills; register the MCP server once through top-level Codex config as mcp_servers.ubw.",
+    "longDescription": "Universal Brute Workpack adds a stdio-first MCP tool bundle for local files, CPU-parallel grep, commands, validation, memory fallback, audit runs, and Agent pipelines. This Codex wrapper ships lightweight companion skills; register the MCP server once with universal-brute-workpack install codex.",
     "developerName": "Yupeng Zhou",
     "category": "Productivity",
     "capabilities": [

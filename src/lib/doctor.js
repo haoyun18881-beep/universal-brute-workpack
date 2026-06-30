@@ -4,6 +4,8 @@ import { resolveProfile } from './profiles.js';
 import { createAgentAdapter } from './agent-adapter.js';
 import { workerPoolSettings } from './local-worker-pool.js';
 import { managedSidecarStatus, sidecarSettings } from './sidecar-manager.js';
+import { inspectCodexInstall } from './codex-installer.js';
+import { PACKAGE_VERSION } from './version.js';
 
 function checkNodeVersion() {
   const major = Number(process.versions.node.split('.')[0]);
@@ -38,7 +40,7 @@ function checkPort(port) {
   });
 }
 
-export async function runDoctor(config) {
+export async function runDoctor(config, args = {}) {
   const profile = resolveProfile(config.profile);
   const context = {
     config,
@@ -49,10 +51,10 @@ export async function runDoctor(config) {
   };
   const tools = buildTools(context);
   const sidecar = sidecarSettings(config);
-  return {
+  const report = {
     ok: true,
     service: 'universal-brute-workpack',
-    version: '0.1.6',
+    version: PACKAGE_VERSION,
     node: checkNodeVersion(),
     transport_default: config.transport,
     profile: profile.name,
@@ -78,4 +80,6 @@ export async function runDoctor(config) {
       'agent.spawn needs LLM_BASE_URL or OPENAI_BASE_URL for real model calls',
     ],
   };
+  if (args.codex) report.codex = inspectCodexInstall(args);
+  return report;
 }

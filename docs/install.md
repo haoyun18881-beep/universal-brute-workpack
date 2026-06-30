@@ -4,15 +4,55 @@ Universal Brute Workpack is stdio-first. Most MCP clients can auto-start it with
 
 ## Codex
 
-Direct MCP setup:
+Recommended one-command setup:
+
+```bash
+npx -y universal-brute-workpack@0.1.7 install codex
+```
+
+Restart Codex after the command completes. The installer:
+
+- copies UBW into a stable local version path under your home directory
+- backs up `~/.codex/config.toml`
+- replaces or creates `[mcp_servers.ubw]`
+- detects duplicate UBW-looking MCP registrations
+- makes Codex run `node .../src/bridge.js` directly instead of daily `npx`
+
+Verify:
+
+```bash
+npx -y universal-brute-workpack@0.1.7 doctor --codex
+```
+
+Repair through the doctor alias:
+
+```bash
+npx -y universal-brute-workpack@0.1.7 doctor --codex --fix
+```
+
+Preview without writing:
+
+```bash
+npx -y universal-brute-workpack@0.1.7 install codex --dry-run
+```
+
+Add `--json` to `install codex` or `rollback codex` when a script needs the full machine-readable report.
+
+Rollback to the latest UBW config backup:
+
+```bash
+npx -y universal-brute-workpack@0.1.7 rollback codex
+```
+
+Advanced manual MCP setup:
 
 ```toml
 [mcp_servers.ubw]
 command = "npx"
-args = ["-y", "universal-brute-workpack@0.1.6", "serve", "--stdio", "--profile", "admin"]
+args = ["-y", "universal-brute-workpack@0.1.7", "serve", "--stdio", "--profile", "admin"]
 ```
 
-This gives Codex the UBW tools, but it does not make UBW appear as a plugin card or `@` plugin entry.
+Manual `npx` config gives Codex the same UBW tools, but each UBW MCP instance keeps an extra `npx` Node process. The installer avoids that for normal Codex use. Neither path makes UBW appear as a plugin card or `@` plugin entry by itself.
 
 Optional Codex plugin wrapper:
 
@@ -99,13 +139,14 @@ UBW_AGENT_TASK_TIMEOUT_MS=300000
 ## First-Run Verify
 
 ```bash
-npx -y universal-brute-workpack@0.1.6 doctor
+npx -y universal-brute-workpack@0.1.7 doctor --codex
 ```
 
 Healthy first run should show:
 
-- `version: "0.1.6"`
+- `version: "0.1.7"`
 - `tools.count: 26`
+- `codex.ok: true` after `install codex`
 - `profile: "admin"` unless you selected another profile
 - `worker_pool.enabled: true`
 - `sidecar.mode: "managed"`
@@ -123,7 +164,7 @@ Change License: Apache License v2.0. Change Date: 2030-06-29.
 Streamable HTTP is available for clients or hosted gateways that need a single HTTP MCP endpoint:
 
 ```powershell
-npx -y universal-brute-workpack@0.1.6 serve --transport streamable-http --port 18890 --profile admin
+npx -y universal-brute-workpack@0.1.7 serve --transport streamable-http --port 18890 --profile admin
 ```
 
 The MCP endpoint is:
@@ -145,5 +186,5 @@ For a Smithery URL publishing hosting recipe, see `docs/smithery-hosting.md`.
 SSE is optional for clients that prefer a long-running local service:
 
 ```powershell
-npx -y universal-brute-workpack@0.1.6 serve --transport sse --port 18890 --profile admin
+npx -y universal-brute-workpack@0.1.7 serve --transport sse --port 18890 --profile admin
 ```

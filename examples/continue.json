@@ -2,7 +2,7 @@
   "mcpServers": {
     "ubw": {
       "command": "npx",
-      "args": ["-y", "universal-brute-workpack@0.1.6", "serve", "--stdio"]
+      "args": ["-y", "universal-brute-workpack@0.1.7", "serve", "--stdio"]
     }
   }
 }
