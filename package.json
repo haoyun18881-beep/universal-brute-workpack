@@ -1,10 +1,10 @@
 {
   "name": "universal-brute-workpack",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "mcpName": "io.github.haoyun18881-beep/universal-brute-workpack",
   "description": "Universal Brute Workpack — a full-capability stdio-first Agent MCP workpack with configurable tools, memory fallback, and Agent pipeline orchestration.",
-  "changelog": "0.1.7: Codex one-command installer, local stable runtime path, config backup, doctor, and rollback.",
-  "changelogDetail": "Adds universal-brute-workpack install codex, doctor --codex, and rollback codex so Codex users can install UBW into a stable local path, rewrite mcp_servers.ubw away from npx, keep timestamped config backups, detect duplicate UBW registrations, and restore the previous config if needed.",
+  "changelog": "0.1.8: Codex daily profile, lighter companion skills, and stronger search fallback.",
+  "changelogDetail": "Adds codex_daily and codex_orchestrator profiles, keeps search.web in the daily Codex surface, makes install codex default to codex_daily, consolidates Codex companion skills into a general UBW boundary guide plus the advanced ubw-audit entry, and adds ordered web-search fallback through Exa, Tavily, DuckDuckGo, and direct HTTP.",
   "type": "module",
   "main": "src/bridge.js",
   "bin": {
@@ -21,6 +21,8 @@
     "smoke:host": "node ./test/host-mediated-smoke.mjs",
     "smoke:stdio": "node ./test/stdio-smoke.mjs",
     "smoke:codex-install": "node ./test/codex-installer-smoke.mjs",
+    "smoke:profiles": "node ./test/profile-smoke.mjs",
+    "smithery:preflight": "node ./scripts/smithery-url-preflight.mjs",
     "mcpb:stage": "node ./scripts/prepare-mcpb.mjs",
     "mcpb:validate": "npm run mcpb:stage --silent && npx --yes @anthropic-ai/mcpb validate ./dist/mcpb/universal-brute-workpack",
     "mcpb:pack": "npm run mcpb:stage --silent && npx --yes @anthropic-ai/mcpb pack ./dist/mcpb/universal-brute-workpack ./dist/mcpb/universal-brute-workpack.mcpb",

@@ -1,7 +1,7 @@
 {
   "name": "universal-brute-workpack",
-  "version": "0.1.7",
-  "description": "Universal Brute Workpack Codex wrapper for companion skills.",
+  "version": "0.1.8",
+  "description": "Universal Brute Workpack 的轻量 Codex 技能入口。",
   "author": {
     "name": "Yupeng Zhou",
     "url": "https://github.com/haoyun18881-beep/universal-brute-workpack"
@@ -18,9 +18,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Universal Brute Workpack",
-    "shortDescription": "Companion skills for the UBW MCP workpack.",
-    "longDescription": "Universal Brute Workpack adds a stdio-first MCP tool bundle for local files, CPU-parallel grep, commands, validation, memory fallback, audit runs, and Agent pipelines. This Codex wrapper ships lightweight companion skills; register the MCP server once with universal-brute-workpack install codex.",
+    "displayName": "UBW 工具包",
+    "shortDescription": "UBW MCP 工具的轻量入口。",
+    "longDescription": "Universal Brute Workpack 提供本地文件、CPU 并行 grep、验证和审计证据链等 MCP 能力。这个 Codex wrapper 只提供日常 UBW 工具入口和高级 UBW 审计入口；MCP server 通过 universal-brute-workpack install codex 单独注册一次。",
     "developerName": "Yupeng Zhou",
     "category": "Productivity",
     "capabilities": [
@@ -30,9 +30,8 @@
       "Automation"
     ],
     "defaultPrompt": [
-      "Use UBW to search files and summarize findings.",
-      "Use UBW to prepare an audit run.",
-      "Use UBW to review code and run checks."
+      "使用 UBW 工具做批量文件发现、并行 grep、只读分析或验证。",
+      "使用 UBW 审计准备或回收证据流程。"
     ],
     "brandColor": "#111827"
   },

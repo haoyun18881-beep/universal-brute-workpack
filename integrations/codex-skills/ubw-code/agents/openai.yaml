@@ -1,4 +1,0 @@
-interface:
-  display_name: "UBW Code"
-  short_description: "Review and validate code via UBW"
-  default_prompt: "Use $ubw-code to review code and run validation tools through Universal Brute Workpack."

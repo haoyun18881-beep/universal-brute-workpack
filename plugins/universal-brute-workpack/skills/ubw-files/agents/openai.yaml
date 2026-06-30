@@ -1,4 +1,0 @@
-interface:
-  display_name: "UBW Files"
-  short_description: "Parallel local file discovery"
-  default_prompt: "Use $ubw-files to find, grep, list, read, or profile local files through Universal Brute Workpack."

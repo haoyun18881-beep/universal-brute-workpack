@@ -1,6 +1,19 @@
 const DEFAULT_PROFILES = {
   admin: { allow: ['*'], write: true, exec: true, spawnDepth: 100 },
   full: { extends: 'admin' },
+  codex_daily: {
+    allow: ['search.web', 'fs.glob', 'fs.grep', 'fs.list', 'file.read', 'worker.analyze', 'worker.diff', 'worker.status', 'code.review', 'validate.check', 'validate.load', 'validate.diff'],
+    write: false,
+    exec: false,
+    spawnDepth: 0,
+  },
+  codex_orchestrator: {
+    extends: 'codex_daily',
+    allow: ['search.fetch', 'memory.search', 'memory.recall', 'audit.prepare', 'audit.ingest_report', 'audit.run', 'audit.collect', 'agent.spawn', 'agent.pipeline'],
+    write: false,
+    exec: false,
+    spawnDepth: 20,
+  },
   readonly: {
     allow: ['search.web', 'search.fetch', 'fs.glob', 'fs.grep', 'fs.list', 'file.read', 'code.review', 'memory.search', 'memory.recall', 'worker.analyze', 'worker.diff', 'worker.status', 'validate.check', 'validate.load'],
     write: false,

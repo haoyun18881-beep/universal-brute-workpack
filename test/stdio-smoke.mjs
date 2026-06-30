@@ -161,6 +161,13 @@ async function runScenario(mode) {
     assert(!write.error, write.error?.message);
     assert.equal(readFileSync(target, 'utf-8'), 'stdio ok memory recall needle');
 
+    const unicodeTarget = join(root, '中文路径-读取-smoke.md');
+    const unicodeWrite = await request(child, next, mode, 31, 'tools/call', { name: 'file.write', arguments: { path: unicodeTarget, content: 'unicode path ok' } });
+    assert(!unicodeWrite.error, unicodeWrite.error?.message);
+    const unicodeRead = await request(child, next, mode, 32, 'tools/call', { name: 'file.read', arguments: { path: unicodeTarget } });
+    assert(!unicodeRead.error, unicodeRead.error?.message);
+    assert(unicodeRead.result.content[0].text.includes('unicode path ok'));
+
     const memory = await request(child, next, mode, 4, 'tools/call', { name: 'memory.recall', arguments: { query: 'recall needle', root, topK: 3 } });
     assert(!memory.error, memory.error?.message);
     assert(memory.result.content[0].text.includes('local_keyword_file_scan'));

@@ -95,13 +95,18 @@ function globToRegex(pattern = '**/*') {
 function configuredSecret(provider = {}, fallbackEnvNames = []) {
   if (provider.value) return provider.value;
   if (provider.apiKey) return provider.apiKey;
+  if (provider.apiKeyFile) {
+    try {
+      const stat = statSync(provider.apiKeyFile);
+      if (stat.isFile() && stat.size <= 10000) return readFileSync(provider.apiKeyFile, 'utf-8').trim();
+    } catch {}
+  }
   const envNames = [
     provider.env,
-    provider.apiKeyEnv,
-    ...(Array.isArray(provider.apiKeyEnv) ? provider.apiKeyEnv : []),
+    ...(Array.isArray(provider.apiKeyEnv) ? provider.apiKeyEnv : [provider.apiKeyEnv]),
     ...fallbackEnvNames,
   ].filter(Boolean);
-  for (const name of envNames) {
+  for (const name of new Set(envNames)) {
     const value = process.env[name];
     if (value) return value;
   }
@@ -118,67 +123,254 @@ function configuredValue(provider = {}, keys = [], fallbackEnvNames = [], fallba
   return fallback;
 }
 
+function normalizeSearchBackends(backends) {
+  const list = Array.isArray(backends) ? backends : String(backends || '').split(',');
+  const aliases = { ddg: 'duckduckgo', bing: 'direct_http' };
+  const seen = new Set();
+  return list
+    .map((item) => aliases[String(item || '').trim().toLowerCase()] || String(item || '').trim().toLowerCase())
+    .filter((item) => item && !seen.has(item) && seen.add(item));
+}
+
+function decodeHtmlEntities(text) {
+  const named = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+  return String(text || '').replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (_, entity) => {
+    if (entity[0] === '#') {
+      const isHex = entity[1]?.toLowerCase() === 'x';
+      const code = parseInt(entity.slice(isHex ? 2 : 1), isHex ? 16 : 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : '';
+    }
+    return named[entity.toLowerCase()] ?? '';
+  });
+}
+
+function htmlToText(html) {
+  return decodeHtmlEntities(String(html || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' '))
+    .replace(/[ \t\f\v]+/g, ' ')
+    .trim();
+}
+
+function isHttpUrl(value) {
+  try {
+    const url = new URL(String(value || ''));
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function normalizeSearchResult(item, backend) {
+  const url = item?.url || item?.href || item?.link || '';
+  return {
+    title: String(item?.title || item?.name || url || '(untitled)').trim(),
+    url,
+    content: String(item?.content || item?.snippet || item?.body || '').trim(),
+    source: item?.source || backend,
+    score: item?.score,
+  };
+}
+
+function dedupeSearchResults(results, maxResults) {
+  const out = [];
+  const seen = new Set();
+  for (const item of results || []) {
+    const normalized = normalizeSearchResult(item, item?.source || item?.backend || 'unknown');
+    const key = (normalized.url || normalized.title).toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(normalized);
+    if (out.length >= maxResults) break;
+  }
+  return out;
+}
+
+function flattenDdgRelatedTopics(topics, out = []) {
+  for (const topic of topics || []) {
+    if (Array.isArray(topic?.Topics)) {
+      flattenDdgRelatedTopics(topic.Topics, out);
+      continue;
+    }
+    if (topic?.FirstURL || topic?.Text) {
+      out.push({
+        title: topic.Text ? String(topic.Text).split(' - ')[0] : topic.FirstURL,
+        url: topic.FirstURL || '',
+        content: topic.Text || '',
+        source: 'duckduckgo',
+      });
+    }
+  }
+  return out;
+}
+
+function parseBingHtmlResults(html, maxResults) {
+  const blocks = String(html || '').split(/<li[^>]+class=["'][^"']*\bb_algo\b[^"']*["'][^>]*>/i).slice(1);
+  const results = [];
+  for (const block of blocks) {
+    const linkMatch = block.match(/<h2[^>]*>[\s\S]*?<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i)
+      || block.match(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i);
+    if (!linkMatch) continue;
+    const url = decodeHtmlEntities(linkMatch[1]);
+    if (!isHttpUrl(url)) continue;
+    const snippetMatch = block.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+    results.push({
+      title: htmlToText(linkMatch[2]),
+      url,
+      content: snippetMatch ? htmlToText(snippetMatch[1]) : '',
+      source: 'direct_http',
+    });
+    if (results.length >= maxResults) break;
+  }
+  return dedupeSearchResults(results, maxResults);
+}
+
+function backendError(backend, message, extra = {}) {
+  return Object.assign(new Error(message), { backend, status: extra.status, notConfigured: Boolean(extra.notConfigured) });
+}
+
+async function exaSearch(query, maxResults, provider, timeoutMs) {
+  const exaKey = configuredSecret(provider, ['EXA_API_KEY']);
+  if (!exaKey) throw backendError('exa', 'exa api key not configured', { notConfigured: true });
+  const res = await fetch(configuredValue(provider, ['endpoint'], [], 'https://api.exa.ai/search'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': exaKey },
+    body: JSON.stringify({ query, numResults: maxResults }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw backendError('exa', `exa returned HTTP ${res.status}`, { status: res.status });
+  return {
+    backend: 'exa',
+    status: res.status,
+    data,
+    results: dedupeSearchResults(data.results || [], maxResults),
+  };
+}
+
+async function tavilySearch(query, maxResults, provider, timeoutMs) {
+  const tavilySecret = configuredSecret(provider, ['TAVILY_API_KEY', 'TAVILY_API_KEYS']);
+  if (!tavilySecret) throw backendError('tavily', 'tavily api key not configured', { notConfigured: true });
+  const key = tavilySecret.includes(',') ? tavilySecret.split(',')[0].trim() : tavilySecret;
+  const res = await fetch(configuredValue(provider, ['endpoint'], [], 'https://api.tavily.com/search'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      query,
+      max_results: maxResults,
+      include_answer: true,
+    }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw backendError('tavily', `tavily returned HTTP ${res.status}`, { status: res.status });
+  return {
+    backend: 'tavily',
+    answer: data.answer || '',
+    results: dedupeSearchResults((data.results || []).map((item) => ({
+      title: item.title,
+      url: item.url,
+      content: item.content || item.raw_content || '',
+      score: item.score,
+      source: 'tavily',
+    })), maxResults),
+  };
+}
+
+async function duckDuckGoSearch(query, maxResults, provider, timeoutMs) {
+  const endpoint = configuredValue(provider, ['endpoint'], [], 'https://api.duckduckgo.com/');
+  const joiner = endpoint.includes('?') ? '&' : '?';
+  const url = `${endpoint}${joiner}q=${encodeURIComponent(query)}&format=json&no_redirect=1&no_html=1&skip_disambig=1`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw backendError('duckduckgo', `duckduckgo returned HTTP ${res.status}`, { status: res.status });
+  const related = flattenDdgRelatedTopics(data.RelatedTopics || []);
+  const results = dedupeSearchResults([
+    data.AbstractURL || data.AbstractText ? {
+      title: data.Heading || data.AbstractSource || query,
+      url: data.AbstractURL || '',
+      content: data.AbstractText || data.Answer || '',
+      source: 'duckduckgo',
+    } : null,
+    ...related,
+  ].filter(Boolean), maxResults);
+  if (!data.AbstractText && !data.Answer && results.length === 0) {
+    throw backendError('duckduckgo', 'duckduckgo returned no results');
+  }
+  return {
+    backend: 'duckduckgo_instant_answer',
+    heading: data.Heading,
+    answer: data.AbstractText || data.Answer || '',
+    related: related.slice(0, maxResults),
+    results,
+  };
+}
+
+async function directHttpSearch(query, maxResults, provider, timeoutMs) {
+  const searchUrl = configuredValue(provider, ['searchUrl', 'endpoint'], [], 'https://www.bing.com/search');
+  const joiner = searchUrl.includes('?') ? '&' : '?';
+  const url = `${searchUrl}${joiner}${new URLSearchParams({ q: query }).toString()}`;
+  const maxBytes = Math.max(50000, Math.min(Number(provider.maxContentLength || 300000), 1000000));
+  const userAgent = provider.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) UBW-search/1.0 Safari/537.36';
+  const res = await fetch(url, {
+    redirect: 'follow',
+    headers: {
+      accept: 'text/html,application/xhtml+xml',
+      'user-agent': userAgent,
+    },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  const html = (await res.text()).slice(0, maxBytes);
+  if (!res.ok) throw backendError('direct_http', `direct_http returned HTTP ${res.status}`, { status: res.status });
+  const results = parseBingHtmlResults(html, maxResults);
+  if (results.length === 0) throw backendError('direct_http', 'direct_http returned no results');
+  return { backend: 'direct_http', searchUrl, results };
+}
+
 async function searchWeb(args, context) {
   const query = String(args.query || '').trim();
   if (!query) throw new Error('query is required');
   const maxResults = Math.max(1, Math.min(Number(args.maxResults || context.config.search?.maxResults || 5), 20));
   const timeoutMs = context.config.search?.timeoutMs || 15000;
-  const backends = context.config.search?.backends || ['exa', 'tavily', 'duckduckgo'];
+  const backends = normalizeSearchBackends(context.config.search?.backends || ['exa', 'tavily', 'duckduckgo', 'direct_http']);
   const providers = context.config.search?.providers || {};
-  const exaProvider = providers.exa || {};
-  const tavilyProvider = providers.tavily || {};
-  const ddgProvider = providers.duckduckgo || {};
-  const exaKey = configuredSecret(exaProvider, ['EXA_API_KEY']);
-  const tavilyKey = configuredSecret(tavilyProvider, ['TAVILY_API_KEY', 'TAVILY_API_KEYS']);
   const warnings = [];
+  let fallbackUsed = false;
 
-  if (backends.includes('exa') && exaKey) {
+  for (const backend of backends) {
     try {
-      const res = await fetch(configuredValue(exaProvider, ['endpoint'], [], 'https://api.exa.ai/search'), {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-api-key': exaKey },
-        body: JSON.stringify({ query, numResults: maxResults }),
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-      if (res.ok) return textResult({ backend: 'exa', status: res.status, data: await res.json() }, context);
-      warnings.push(`exa returned HTTP ${res.status}`);
-    } catch (error) {
-      warnings.push(`exa failed: ${error.message}`);
-    }
-  }
-
-  if (backends.includes('tavily') && tavilyKey) {
-    try {
-      const key = tavilyKey.includes(',') ? tavilyKey.split(',')[0] : tavilyKey;
-      const res = await fetch(configuredValue(tavilyProvider, ['endpoint'], [], 'https://api.tavily.com/search'), {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ api_key: key, query, max_results: maxResults }),
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        return textResult({ backend: 'tavily', results: data.results || [] }, context);
+      let result;
+      switch (backend) {
+        case 'exa':
+          result = await exaSearch(query, maxResults, providers.exa || {}, timeoutMs);
+          break;
+        case 'tavily':
+          result = await tavilySearch(query, maxResults, providers.tavily || {}, timeoutMs);
+          break;
+        case 'duckduckgo':
+          result = await duckDuckGoSearch(query, maxResults, providers.duckduckgo || providers.ddg || {}, timeoutMs);
+          break;
+        case 'direct_http':
+          result = await directHttpSearch(query, maxResults, providers.direct_http || providers.bing || {}, timeoutMs);
+          break;
+        default:
+          throw backendError(backend, `unknown search backend: ${backend}`);
       }
-      warnings.push(`tavily returned HTTP ${res.status}`);
+      return textResult({ query, fallbackUsed, degraded_from: warnings, ...result }, context);
     } catch (error) {
-      warnings.push(`tavily failed: ${error.message}`);
+      fallbackUsed = true;
+      warnings.push(`${backend}: ${error.message}`);
     }
   }
 
-  if (!backends.includes('duckduckgo')) {
-    return textResult({ ok: false, status: 'not_configured', message: 'No configured search backend is available without keys.', query }, context, true);
-  }
-  const endpoint = configuredValue(ddgProvider, ['endpoint'], [], 'https://api.duckduckgo.com/');
-  const url = `${endpoint}?q=${encodeURIComponent(query)}&format=json&no_redirect=1&no_html=1`;
-  const data = await (await fetch(url, { signal: AbortSignal.timeout(timeoutMs) })).json();
   return textResult({
-    backend: 'duckduckgo_instant_answer',
+    ok: false,
+    status: 'search_unavailable',
+    query,
+    attempted_backends: backends,
     degraded_from: warnings,
-    heading: data.Heading,
-    abstract: data.AbstractText,
-    related: (data.RelatedTopics || []).slice(0, maxResults),
-  }, context);
+  }, context, true);
 }
 
 function runNodeCheck(path) {
@@ -433,7 +625,7 @@ function normalizePipelineArgs(args, context) {
 
 export function buildTools(context) {
   return [
-    tool('search.web', 'Search the web via Exa, Tavily, or DuckDuckGo fallback.', { query: { type: 'string' }, maxResults: { type: 'number' } }, searchWeb),
+    tool('search.web', 'Search the web via configured Exa, Tavily, DuckDuckGo, or direct HTTP fallback.', { query: { type: 'string' }, maxResults: { type: 'number' } }, searchWeb),
     tool('search.fetch', 'Fetch an HTTP/HTTPS URL as text.', { url: { type: 'string' } }, async (args) => {
       const url = String(args.url || '');
       if (!/^https?:\/\//i.test(url)) throw new Error('only http/https URLs are supported');
@@ -479,6 +671,11 @@ export function buildTools(context) {
     }),
     tool('file.read', 'Read a file.', { path: { type: 'string' } }, async (args) => {
       const path = resolveInside(args.path, context, { mustExist: true });
+      const size = statSync(path).size;
+      const maxBytes = Number(context.config.limits?.maxReadFileBytes || context.config.worker?.maxFileBytes || 2000000);
+      if (maxBytes > 0 && size > maxBytes) {
+        throw new Error(`file is too large for file.read: ${size} bytes > ${maxBytes} bytes`);
+      }
       return textResult({ path, text: readFileSync(path, 'utf-8') }, context);
     }),
     tool('file.write', 'Write a file.', { path: { type: 'string' }, content: { type: 'string' } }, async (args) => {

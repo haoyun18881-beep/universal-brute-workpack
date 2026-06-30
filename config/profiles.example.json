@@ -11,6 +11,44 @@
   "full": {
     "extends": "admin"
   },
+  "codex_daily": {
+    "allow": [
+      "search.web",
+      "fs.glob",
+      "fs.grep",
+      "fs.list",
+      "file.read",
+      "worker.analyze",
+      "worker.diff",
+      "worker.status",
+      "code.review",
+      "validate.check",
+      "validate.load",
+      "validate.diff"
+    ],
+    "deny": [],
+    "write": false,
+    "exec": false,
+    "spawnDepth": 0
+  },
+  "codex_orchestrator": {
+    "extends": "codex_daily",
+    "allow": [
+      "search.fetch",
+      "memory.search",
+      "memory.recall",
+      "audit.prepare",
+      "audit.ingest_report",
+      "audit.run",
+      "audit.collect",
+      "agent.spawn",
+      "agent.pipeline"
+    ],
+    "deny": [],
+    "write": false,
+    "exec": false,
+    "spawnDepth": 20
+  },
   "orchestrator": {
     "extends": "developer",
     "allow": [

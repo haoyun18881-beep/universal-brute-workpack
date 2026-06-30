@@ -1,6 +1,7 @@
 import http from 'http';
+import { existsSync, statSync } from 'fs';
 import { buildTools } from '../tools/core.js';
-import { resolveProfile } from './profiles.js';
+import { canUseTool, resolveProfile } from './profiles.js';
 import { createAgentAdapter } from './agent-adapter.js';
 import { workerPoolSettings } from './local-worker-pool.js';
 import { managedSidecarStatus, sidecarSettings } from './sidecar-manager.js';
@@ -12,9 +13,16 @@ function checkNodeVersion() {
   return { ok: major >= 20, version: process.version, required: '>=20' };
 }
 
-function configured(configValue, envNames = []) {
+function configured(configValue, envNames = [], filePath = '') {
   if (configValue) return true;
-  return envNames.filter(Boolean).some((name) => !!process.env[name]);
+  if (filePath) {
+    try {
+      return existsSync(filePath) && statSync(filePath).isFile();
+    } catch {
+      return false;
+    }
+  }
+  return envNames.flat().filter(Boolean).some((name) => !!process.env[name]);
 }
 
 function checkEnv(config) {
@@ -22,9 +30,10 @@ function checkEnv(config) {
   const llm = config.llm || {};
   const memory = config.memory || {};
   return {
-    tavily: configured(search.tavily?.apiKey, [search.tavily?.apiKeyEnv, 'TAVILY_API_KEY', 'TAVILY_API_KEYS']),
-    exa: configured(search.exa?.apiKey, [search.exa?.apiKeyEnv, 'EXA_API_KEY']),
+    tavily: configured(search.tavily?.apiKey, [search.tavily?.apiKeyEnv, 'TAVILY_API_KEY', 'TAVILY_API_KEYS'], search.tavily?.apiKeyFile),
+    exa: configured(search.exa?.apiKey, [search.exa?.apiKeyEnv, 'EXA_API_KEY'], search.exa?.apiKeyFile),
     duckduckgo_fallback: true,
+    direct_http_fallback: true,
     memory_url: configured(memory.url, [memory.urlEnv, 'UBW_MEMORY_URL']),
     llm_base_url: configured(llm.baseUrl, [llm.baseUrlEnv, 'LLM_BASE_URL', 'OPENAI_BASE_URL']),
     llm_model_configured: configured(llm.model, [llm.modelEnv, 'LLM_MODEL', 'OPENAI_MODEL']),
@@ -50,6 +59,7 @@ export async function runDoctor(config, args = {}) {
     agentAdapter: createAgentAdapter(config),
   };
   const tools = buildTools(context);
+  const visibleTools = tools.filter((tool) => canUseTool(profile, tool.name));
   const sidecar = sidecarSettings(config);
   const report = {
     ok: true,
@@ -69,13 +79,14 @@ export async function runDoctor(config, args = {}) {
         : { mode: sidecar.mode, required: false, managed_on_first_agent_call: sidecar.managed },
     },
     tools: {
-      count: tools.length,
-      names: tools.map((tool) => tool.name),
+      count: visibleTools.length,
+      names: visibleTools.map((tool) => tool.name),
+      totalAvailable: tools.length,
     },
     notes: [
       'stdio clients do not need a listening port',
       'streamable-http clients use POST /mcp; legacy SSE clients can still use /sse',
-      'search.web works without keys through DuckDuckGo fallback',
+      'search.web works without keys through DuckDuckGo/direct HTTP fallback',
       'memory.search works without a memory service through local text fallback',
       'agent.spawn needs LLM_BASE_URL or OPENAI_BASE_URL for real model calls',
     ],

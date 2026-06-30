@@ -5,8 +5,40 @@ This document is a package-side hosting recipe for Smithery URL publishing. It d
 Smithery URL publishing expects a public HTTPS MCP URL that speaks Streamable HTTP. Universal Brute Workpack exposes that endpoint at `/mcp`:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 serve --transport streamable-http --host 0.0.0.0 --port 18890 --profile readonly
+npx -y universal-brute-workpack@0.1.8 serve --transport streamable-http --host 0.0.0.0 --port 18890 --profile readonly
 ```
+
+## Quickest Safe Route
+
+Use URL publishing first. Do not start with MCPB packaging unless the URL route is blocked.
+
+1. Host UBW in a disposable public environment with HTTPS terminated by the host or reverse proxy.
+2. Start UBW with the `readonly` profile and an explicit public root:
+
+   ```bash
+   mkdir -p /tmp/ubw-public-root
+   npx -y universal-brute-workpack@0.1.8 serve --transport streamable-http --host 0.0.0.0 --port "${PORT:-18890}" --profile readonly
+   ```
+
+3. Point the public HTTPS URL to `/mcp`, for example:
+
+   ```text
+   https://your-host.example/mcp
+   ```
+
+4. Run the one-command preflight:
+
+   ```bash
+   npm run smithery:preflight -- https://your-host.example/mcp
+   ```
+
+5. Only after preflight passes and release is approved, publish:
+
+   ```bash
+   smithery mcp publish "https://your-host.example/mcp" -n @your-org/universal-brute-workpack
+   ```
+
+The preflight checks `/health`, the static server card, Streamable HTTP `initialize`, `tools/list`, and that public readonly hosting does not expose high-risk tools.
 
 For a public URL, publish the HTTPS endpoint that maps to:
 
@@ -35,7 +67,7 @@ Create the root directory during host startup:
 
 ```bash
 mkdir -p /tmp/ubw-public-root
-npx -y universal-brute-workpack@0.1.7 serve --transport streamable-http --host 0.0.0.0 --port "${PORT:-18890}" --profile readonly
+npx -y universal-brute-workpack@0.1.8 serve --transport streamable-http --host 0.0.0.0 --port "${PORT:-18890}" --profile readonly
 ```
 
 `readonly` keeps the hosted surface to search, fetch, file read/list/search inside configured roots, review, validation, memory fallback, worker analyze/diff, and status-like checks. It blocks file writes, shell execution, and Agent spawning.

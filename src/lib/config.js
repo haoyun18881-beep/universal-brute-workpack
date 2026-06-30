@@ -133,7 +133,7 @@ export function loadConfig(args = {}) {
       taskHistoryLimit: Number(process.env.UBW_AGENT_TASK_HISTORY_LIMIT || 1000),
     },
     search: { timeoutMs: 15000, maxResults: 5 },
-    limits: { maxOutputChars: 60000, maxFetchChars: 80000, commandTimeoutMs: 10000 },
+    limits: { maxOutputChars: 60000, maxFetchChars: 80000, maxReadFileBytes: 2000000, commandTimeoutMs: 10000 },
   };
   const config = mergeConfig(defaults, fileConfig);
 

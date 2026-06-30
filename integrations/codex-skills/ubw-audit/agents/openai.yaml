@@ -1,4 +1,4 @@
 interface:
-  display_name: "UBW Audit"
-  short_description: "TaskCard and EvidenceBundle flow"
-  default_prompt: "Use $ubw-audit to prepare, run, collect, or ingest audit reports with Universal Brute Workpack."
+  display_name: "UBW 审计"
+  short_description: "任务卡和证据包流程"
+  default_prompt: "使用 $ubw-audit 准备或回收 UBW 审计证据流程。"

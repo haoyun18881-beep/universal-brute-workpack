@@ -7,7 +7,7 @@ Universal Brute Workpack is stdio-first. Most MCP clients can auto-start it with
 Recommended one-command setup:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 install codex
+npx -y universal-brute-workpack@0.1.8 install codex
 ```
 
 Restart Codex after the command completes. The installer:
@@ -17,23 +17,24 @@ Restart Codex after the command completes. The installer:
 - replaces or creates `[mcp_servers.ubw]`
 - detects duplicate UBW-looking MCP registrations
 - makes Codex run `node .../src/bridge.js` directly instead of daily `npx`
+- uses `--profile codex_daily` by default so Codex sees the smaller everyday tool surface
 
 Verify:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 doctor --codex
+npx -y universal-brute-workpack@0.1.8 doctor --codex --profile codex_daily
 ```
 
 Repair through the doctor alias:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 doctor --codex --fix
+npx -y universal-brute-workpack@0.1.8 doctor --codex --fix
 ```
 
 Preview without writing:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 install codex --dry-run
+npx -y universal-brute-workpack@0.1.8 install codex --dry-run
 ```
 
 Add `--json` to `install codex` or `rollback codex` when a script needs the full machine-readable report.
@@ -41,7 +42,7 @@ Add `--json` to `install codex` or `rollback codex` when a script needs the full
 Rollback to the latest UBW config backup:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 rollback codex
+npx -y universal-brute-workpack@0.1.8 rollback codex
 ```
 
 Advanced manual MCP setup:
@@ -49,10 +50,10 @@ Advanced manual MCP setup:
 ```toml
 [mcp_servers.ubw]
 command = "npx"
-args = ["-y", "universal-brute-workpack@0.1.7", "serve", "--stdio", "--profile", "admin"]
+args = ["-y", "universal-brute-workpack@0.1.8", "serve", "--stdio", "--profile", "codex_daily"]
 ```
 
-Manual `npx` config gives Codex the same UBW tools, but each UBW MCP instance keeps an extra `npx` Node process. The installer avoids that for normal Codex use. Neither path makes UBW appear as a plugin card or `@` plugin entry by itself.
+Use `--profile codex_daily` for normal Codex use. Select `admin` only when you intentionally want the full tool surface. Manual `npx` config gives Codex the same UBW tools, but each UBW MCP instance keeps an extra `npx` Node process. The installer avoids that for normal Codex use. Neither path makes UBW appear as a plugin card or `@` plugin entry by itself.
 
 Optional Codex plugin wrapper:
 
@@ -96,7 +97,7 @@ Use the JSON files in `examples/`.
 
 Copy `.env.example` to `.env` for local development, or set env vars in your MCP client.
 
-No key is required for first run. `search.web` falls back to DuckDuckGo when `TAVILY_API_KEY` and `EXA_API_KEY` are unset. `memory.search` falls back to local text/JSON/Markdown/log search when `UBW_MEMORY_URL` is unset.
+No key is required for first run. `search.web` falls back to DuckDuckGo/direct HTTP when `TAVILY_API_KEY` and `EXA_API_KEY` are unset. `memory.search` falls back to local text/JSON/Markdown/log search when `UBW_MEMORY_URL` is unset.
 
 For more control, copy `config/universal-brute-workpack.example.json` and set `UBW_CONFIG` to that file. Tool allow/deny choices live in `config/profiles.example.json`; copy it and set `UBW_PROFILES` if you want a custom boundary.
 
@@ -107,17 +108,13 @@ The package includes short Codex skills under `integrations/codex-skills/`. They
 From a cloned repo or unpacked npm tarball:
 
 ```powershell
-Copy-Item -Recurse .\integrations\codex-skills\ubw-* "$env:USERPROFILE\.codex\skills\"
+Copy-Item -Recurse .\integrations\codex-skills\ubw* "$env:USERPROFILE\.codex\skills\"
 ```
 
-Skill groups:
+Included skills:
 
-- `ubw-research`: `search.web`, `search.fetch`, `memory.search`, `memory.recall`
-- `ubw-files`: `fs.glob`, `fs.grep`, `fs.list`, `file.read`, `worker.analyze`, `worker.diff`
-- `ubw-edit`: `file.write`, `file.copy`, `file.move`, `code.patch`
-- `ubw-code`: `code.review`, `validate.*`, `command.exec`
-- `ubw-audit`: `audit.prepare`, `audit.ingest_report`, `audit.run`, `audit.collect`
-- `ubw-agent`: `agent.spawn`, `agent.pipeline`
+- `ubw`: tool-boundary guidance for `codex_daily`, profile choices, and when UBW adds value over native Codex tools.
+- `ubw-audit`: advanced TaskCard/runDir/EvidenceBundle workflows for profiles that expose `audit.*`.
 
 `agent.spawn` and `agent.pipeline` require an OpenAI-compatible backend:
 
@@ -139,15 +136,17 @@ UBW_AGENT_TASK_TIMEOUT_MS=300000
 ## First-Run Verify
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 doctor --codex
+npx -y universal-brute-workpack@0.1.8 doctor --codex --profile codex_daily
 ```
 
 Healthy first run should show:
 
-- `version: "0.1.7"`
-- `tools.count: 26`
+- `version: "0.1.8"`
+- `tools.count: 12`
+- `tools.totalAvailable: 26`
 - `codex.ok: true` after `install codex`
-- `profile: "admin"` unless you selected another profile
+- `codex.configured.profile: "codex_daily"` after default `install codex`
+- `profile: "codex_daily"` in the doctor process when using the command above
 - `worker_pool.enabled: true`
 - `sidecar.mode: "managed"`
 
@@ -164,7 +163,7 @@ Change License: Apache License v2.0. Change Date: 2030-06-29.
 Streamable HTTP is available for clients or hosted gateways that need a single HTTP MCP endpoint:
 
 ```powershell
-npx -y universal-brute-workpack@0.1.7 serve --transport streamable-http --port 18890 --profile admin
+npx -y universal-brute-workpack@0.1.8 serve --transport streamable-http --port 18890 --profile admin
 ```
 
 The MCP endpoint is:
@@ -186,5 +185,5 @@ For a Smithery URL publishing hosting recipe, see `docs/smithery-hosting.md`.
 SSE is optional for clients that prefer a long-running local service:
 
 ```powershell
-npx -y universal-brute-workpack@0.1.7 serve --transport sse --port 18890 --profile admin
+npx -y universal-brute-workpack@0.1.8 serve --transport sse --port 18890 --profile admin
 ```

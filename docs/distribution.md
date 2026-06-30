@@ -3,13 +3,13 @@
 Universal Brute Workpack remains stdio-first. The default Codex user path is:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 install codex
+npx -y universal-brute-workpack@0.1.8 install codex
 ```
 
 Other MCP clients can keep the direct stdio path:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 serve --stdio
+npx -y universal-brute-workpack@0.1.8 serve --stdio
 ```
 
 This document tracks registry and marketplace preparation. It is metadata only; publishing to any registry still requires an explicit release step.
@@ -65,7 +65,7 @@ Smithery has two relevant paths:
 UBW now ships a local Streamable HTTP transport in addition to stdio and legacy SSE:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 serve --transport streamable-http --port 18890 --profile admin
+npx -y universal-brute-workpack@0.1.8 serve --transport streamable-http --port 18890 --profile admin
 ```
 
 Local endpoints:
@@ -116,4 +116,4 @@ The Codex plugin wrapper is already self-distributed through:
 plugins/universal-brute-workpack/
 ```
 
-This remains separate from npm and MCP Registry metadata. npm/npx gives users the MCP server; the Codex wrapper gives Codex users plugin UI and companion skills. The wrapper is skills-only, so Codex users should keep a single top-level `mcp_servers.ubw` registration.
+This remains separate from npm and MCP Registry metadata. npm/npx gives users the MCP server; the Codex wrapper gives Codex users plugin UI and two companion skills: `ubw` for tool-boundary guidance and `ubw-audit` for advanced evidence workflows. The wrapper is skills-only, so Codex users should keep a single top-level `mcp_servers.ubw` registration.

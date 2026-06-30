@@ -1,15 +1,23 @@
 # Universal Brute Workpack Tools
 
-Default launch mode is `admin`, so all tools are visible and callable unless the caller explicitly selects a narrower profile.
+Raw `serve` launch mode defaults to `admin`, so all tools are visible and callable unless the caller explicitly selects a narrower profile. `install codex` defaults to `codex_daily`, which exposes only the everyday Codex subset.
+
+| Profile | Visible surface |
+| --- | --- |
+| `codex_daily` | `search.web`, `fs.glob`, `fs.grep`, `fs.list`, `file.read`, `worker.analyze`, `worker.diff`, `worker.status`, `code.review`, `validate.check`, `validate.load`, `validate.diff` |
+| `codex_orchestrator` | `codex_daily` plus `search.fetch`, `memory.*`, `audit.*`, and `agent.*` |
+| `developer` | `readonly` plus UBW writes, patching, command execution, and `validate.diff` |
+| `orchestrator` | `developer` plus `audit.*` and `agent.*` |
+| `admin` / `full` | All 26 tools |
 
 | Tool | Purpose |
 | --- | --- |
-| `search.web` | Web search through Exa, Tavily, or DuckDuckGo fallback. |
+| `search.web` | Web search through Exa, Tavily, DuckDuckGo, or direct HTTP fallback. |
 | `search.fetch` | Fetch HTTP/HTTPS pages as text. |
 | `fs.glob` | File discovery. |
 | `fs.grep` | Plain text search through the local CPU worker pool. |
 | `fs.list` | Directory listing. |
-| `file.read` | Read files. |
+| `file.read` | Read files, with a configurable size guard before loading content. |
 | `file.write` | Write files. |
 | `file.copy` | Copy files or directories. |
 | `file.move` | Move files or directories. |

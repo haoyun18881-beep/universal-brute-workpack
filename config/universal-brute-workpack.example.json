@@ -13,21 +13,29 @@
     "backends": [
       "exa",
       "tavily",
-      "duckduckgo"
+      "duckduckgo",
+      "direct_http"
     ],
     "providers": {
       "exa": {
         "endpoint": "https://api.exa.ai/search",
         "apiKey": "",
+        "apiKeyFile": "",
         "apiKeyEnv": "EXA_API_KEY"
       },
       "tavily": {
         "endpoint": "https://api.tavily.com/search",
         "apiKey": "",
+        "apiKeyFile": "",
         "apiKeyEnv": "TAVILY_API_KEY"
       },
       "duckduckgo": {
         "endpoint": "https://api.duckduckgo.com/"
+      },
+      "direct_http": {
+        "searchUrl": "https://www.bing.com/search",
+        "maxContentLength": 300000,
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) UBW-search/1.0 Safari/537.36"
       }
     },
     "maxResults": 5,
@@ -72,6 +80,7 @@
   "limits": {
     "maxOutputChars": 60000,
     "maxFetchChars": 80000,
+    "maxReadFileBytes": 2000000,
     "commandTimeoutMs": 10000
   }
 }

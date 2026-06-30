@@ -1,0 +1,4 @@
+interface:
+  display_name: "UBW 工具"
+  short_description: "批量文件、读取和验证"
+  default_prompt: "使用 $ubw 做批量文件发现、并行 grep、只读分析或验证。"

@@ -52,15 +52,16 @@ Available now:
 
 - Full-capability MCP tool bundle with stdio, Streamable HTTP, and legacy SSE transports.
 - 26 neutral tools for search, fetch, file operations, code patching/review, commands, validation, memory search/recall, worker analyze/diff, audit chain, status, and Agent spawn/pipeline.
+- Codex installer defaults to `codex_daily`, exposing 12 low-noise tools for web search, bulk file discovery, CPU-parallel grep, read-only review, and validation. Full capability remains available through explicit profiles.
 - CPU-parallel `fs.grep` through a local worker pool. By default it uses available machine parallelism; set `UBW_WORKER_POOL_SIZE` only when you want to limit it.
 - `code.patch` uses exact replacements and rolls back JS-like files when `node --check` fails.
 - Managed sidecar mode for `agent.spawn` and `agent.pipeline`; users do not need to start a second terminal for the sidecar.
 - Concurrent API-backed `agent.pipeline` with configurable task cap, concurrency, stagger timing, and timeout.
 - TaskCard/runDir/collector/EvidenceBundle audit chain through `audit.prepare`, `audit.ingest_report`, `audit.run`, and `audit.collect`.
-- Zero-key first run: DuckDuckGo fallback for web search and local text/JSON/Markdown/log fallback for memory search.
+- Zero-key first run: DuckDuckGo/direct HTTP fallback for web search and local text/JSON/Markdown/log fallback for memory search.
 - Configurable profiles, deny lists, filesystem roots, provider keys, memory backends, LLM endpoints, pipeline task limits, and stagger timing.
 - OpenAI-compatible API mode for `agent.spawn` and `agent.pipeline`; if no model backend is configured, Agent tools return `not_configured` instead of killing the MCP process.
-- Optional Codex companion skills under `integrations/codex-skills/` for scenario-based, low-token UBW usage.
+- Optional Codex companion skills under `integrations/codex-skills/`: a general `ubw` boundary guide plus the advanced `ubw-audit` entry.
 - Optional Codex plugin wrapper under `plugins/universal-brute-workpack/` plus `.agents/plugins/marketplace.json` for users who want UBW to appear in the Codex plugin UI.
 
 Proven pattern / current portable base:
@@ -75,21 +76,21 @@ Proven pattern / current portable base:
 For Codex, run the installer once:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 install codex
+npx -y universal-brute-workpack@0.1.8 install codex
 ```
 
-Then restart Codex. The installer copies UBW into a stable local version path, backs up `~/.codex/config.toml`, replaces `mcp_servers.ubw`, and makes Codex run `node .../src/bridge.js` directly instead of keeping `npx` in the daily MCP process tree.
+Then restart Codex. The installer copies UBW into a stable local version path, backs up `~/.codex/config.toml`, replaces `mcp_servers.ubw`, and makes Codex run `node .../src/bridge.js` directly instead of keeping `npx` in the daily MCP process tree. Codex installs use `--profile codex_daily` by default to keep the everyday tools list small.
 
 Verify the local Codex registration with:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 doctor --codex
+npx -y universal-brute-workpack@0.1.8 doctor --codex --profile codex_daily
 ```
 
 Rollback the Codex config backup with:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 rollback codex
+npx -y universal-brute-workpack@0.1.8 rollback codex
 ```
 
 Other MCP clients can auto-start the workpack with `npx`:
@@ -99,7 +100,7 @@ Other MCP clients can auto-start the workpack with `npx`:
   "mcpServers": {
     "ubw": {
       "command": "npx",
-      "args": ["-y", "universal-brute-workpack@0.1.7", "serve", "--stdio"]
+      "args": ["-y", "universal-brute-workpack@0.1.8", "serve", "--stdio"]
     }
   }
 }
@@ -110,10 +111,10 @@ Manual Codex config is still available as an advanced fallback:
 ```toml
 [mcp_servers.ubw]
 command = "npx"
-args = ["-y", "universal-brute-workpack@0.1.7", "serve", "--stdio", "--profile", "admin"]
+args = ["-y", "universal-brute-workpack@0.1.8", "serve", "--stdio", "--profile", "codex_daily"]
 ```
 
-The one-command installer is preferred for Codex because it writes a stable local `node .../src/bridge.js` registration and avoids an extra `npx` Node process per UBW MCP instance.
+For normal Codex use, prefer `--profile codex_daily`; use `admin` only when you intentionally want the full tool surface. The one-command installer is preferred for Codex because it writes a stable local `node .../src/bridge.js` registration and avoids an extra `npx` Node process per UBW MCP instance.
 
 The MCP setup gives Codex the tools, but it does not make UBW appear in Codex's plugin browser or `@` plugin picker.
 
@@ -126,7 +127,7 @@ codex plugin add universal-brute-workpack@universal-brute-workpack
 
 That wrapper is skills-only; register the MCP server once in top-level Codex config as `mcp_servers.ubw`. If your Codex build exposes plugin installation through the app UI instead of the CLI, add this repository marketplace there, install the wrapper, then start a new thread before `@Universal Brute Workpack` is visible.
 
-No API key is required for first run. File tools, command execution, validation, DuckDuckGo fallback search, and local keyword memory search work out of the box.
+No API key is required for first run. In `codex_daily`, `search.web`, local file discovery, CPU-parallel grep, read-only review, and validation work out of the box. Memory fallback, audit dispatch, raw Agent tools, URL fetch, writes, and command execution are available only when you explicitly choose a profile that exposes them.
 
 If Tavily or Exa is not configured, exhausted, or unavailable, `search.web` falls back instead of crashing. If no memory/vector service is configured, `memory.search` falls back to local text search. If no LLM endpoint is configured, `agent.spawn` and `agent.pipeline` report `not_configured` while every local tool continues working.
 
@@ -136,7 +137,7 @@ There are two Codex integration layers:
 
 | Layer | What It Does | Install Path |
 | --- | --- | --- |
-| MCP server | Gives Codex the actual UBW tools through a stable local `node .../src/bridge.js` command. | Run `npx -y universal-brute-workpack@0.1.7 install codex`. |
+| MCP server | Gives Codex the actual UBW tools through a stable local `node .../src/bridge.js` command. | Run `npx -y universal-brute-workpack@0.1.8 install codex`. |
 | Codex plugin wrapper | Makes UBW show as a Codex plugin and bundles the companion skills. It does not register a second MCP server. | Add this repository marketplace, then install from `.agents/plugins/marketplace.json`. |
 
 The plugin wrapper is manual for now. npm cannot automatically register a Codex plugin in every user's app, and official marketplace curation is not required for self-distribution. The wrapper is included so users can install the companion skills deliberately while keeping the MCP server registered once in top-level config. The `install codex` command handles the MCP server registration; the plugin wrapper is only for plugin UI and skills.
@@ -162,10 +163,10 @@ See `docs/mcpb.md`. This is separate from Smithery URL publishing, which still r
 Codex users can copy the lightweight companion skills so Codex loads short scenario guides instead of repeatedly reading the full UBW manual:
 
 ```powershell
-Copy-Item -Recurse .\integrations\codex-skills\ubw-* "$env:USERPROFILE\.codex\skills\"
+Copy-Item -Recurse .\integrations\codex-skills\ubw* "$env:USERPROFILE\.codex\skills\"
 ```
 
-Included skills: `ubw-research`, `ubw-files`, `ubw-edit`, `ubw-code`, `ubw-audit`, and `ubw-agent`.
+Included skills: `ubw` and `ubw-audit`.
 
 ## Example Use Cases
 
@@ -247,8 +248,9 @@ If no LLM endpoint is configured, Agent tasks return `not_configured` instead of
 ## Defaults
 
 - Tool names are neutral: `search.web`, `file.read`, `command.exec`, `agent.spawn`, and so on.
-- Default mode is full capability: `profile=admin`, `roots=["*"]`.
-- Narrow profiles and per-profile `deny` lists exist only as optional compatibility knobs for clients that want them.
+- Raw `serve` default mode is full capability: `profile=admin`, `roots=["*"]`.
+- `install codex` defaults to `profile=codex_daily`, which exposes `search.web`, `fs.*`, `file.read`, `worker.*`, `code.review`, and `validate.*` but hides writes, arbitrary commands, URL fetch, memory fallback, audit dispatch, and raw Agent tools.
+- Narrow profiles and per-profile `deny` lists are compatibility and safety knobs for clients that want them.
 - Provider keys, memory/vector service URLs, model endpoints, pipeline limits, and stagger timing are configured through `config/universal-brute-workpack.example.json`, `.env`, or your MCP client environment.
 - `memory.search` / `memory.recall` prefer a configured memory service, then fall back to local text/JSON/Markdown/log search instead of failing.
 - `agent.spawn` / `agent.pipeline` use the managed sidecar by default. Set `LLM_BASE_URL`, optional `LLM_API_KEY`, and `LLM_MODEL` for real model calls.
@@ -258,29 +260,29 @@ If no LLM endpoint is configured, Agent tasks return `not_configured` instead of
 stdio, for MCP clients:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 serve --stdio
+npx -y universal-brute-workpack@0.1.8 serve --stdio
 ```
 
 Streamable HTTP, for clients or hosted gateways that need a single HTTP MCP endpoint:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 serve --transport streamable-http --port 18890 --profile admin
+npx -y universal-brute-workpack@0.1.8 serve --transport streamable-http --port 18890 --profile admin
 ```
 
 The MCP endpoint is `http://127.0.0.1:18890/mcp`. A static server card is exposed at `http://127.0.0.1:18890/.well-known/mcp/server-card.json`.
 
-For a Smithery URL publishing hosting recipe, see `docs/smithery-hosting.md`.
+For a Smithery URL publishing hosting recipe and one-command public endpoint preflight, see `docs/smithery-hosting.md`.
 
 Legacy SSE, for older clients that prefer a local server:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 serve --transport sse --port 18890 --profile admin
+npx -y universal-brute-workpack@0.1.8 serve --transport sse --port 18890 --profile admin
 ```
 
 Doctor:
 
 ```bash
-npx -y universal-brute-workpack@0.1.7 doctor
+npx -y universal-brute-workpack@0.1.8 doctor
 ```
 
 For local development, copy `.env.example` to `.env`.
@@ -293,7 +295,7 @@ Agent Client
       └─ Universal Brute Workpack bridge
           ├─ local tools: fs/search/file/code/command/validate
           ├─ CPU worker pool: parallel grep and local bulk scans
-          ├─ fallback tools: DuckDuckGo, local memory keyword scan
+          ├─ fallback tools: DuckDuckGo/direct HTTP, local memory keyword scan
           ├─ managed sidecar: isolated Agent spawn/pipeline process
           └─ audit layer: TaskCards, reports, collector, EvidenceBundles, gate
 ```
@@ -322,7 +324,7 @@ See `LICENSE` for the full English and Chinese terms.
 
 **Do I need an API key?**
 
-No for first run. Local tools, DuckDuckGo fallback, and local memory keyword search work without keys. You only need keys for stronger web providers or model-backed Agent tasks.
+No for first run. Local tools, DuckDuckGo/direct HTTP fallback, and local memory keyword search work without keys. You only need keys for stronger web providers or model-backed Agent tasks.
 
 **Does BUSL restrict personal use?**
 
@@ -330,11 +332,11 @@ Personal, academic, research, and small non-commercial use are free under the in
 
 **Is 100-way Agent orchestration already shipped?**
 
-The portable base is shipped in v0.1.x: worker pool, managed sidecar, concurrent API pipeline, TaskCards, runDir, report ingestion, collector summary, EvidenceBundle, gate file, optional Codex companion skills, and an optional Codex plugin wrapper. OpenClaw has demonstrated the 100-way pre-audit pattern in a larger system; UBW provides the generic MCP package foundation for that style of workflow.
+The portable base is shipped in v0.1.x: worker pool, managed sidecar, concurrent API pipeline, TaskCards, runDir, report ingestion, collector summary, EvidenceBundle, gate file, optional Codex companion skills, and an optional Codex plugin wrapper. OpenClaw has demonstrated the 100-way pre-audit pattern in a larger system; UBW provides the generic MCP package foundation for that style of workflow. Codex daily installs intentionally keep that surface narrow until a task asks for audit or Agent orchestration.
 
 **What happens when keys or quotas are missing?**
 
-The workpack degrades instead of dying: Tavily/Exa can fall back to DuckDuckGo, external memory can fall back to local keyword search, and Agent tools return `not_configured` without breaking file/search/command tools.
+The workpack degrades instead of dying: Tavily/Exa can fall back to DuckDuckGo/direct HTTP, external memory can fall back to local keyword search, and Agent tools return `not_configured` without breaking file/search/command tools.
 
 **Can this use Codex Pro or another subscription Agent as workers?**
 

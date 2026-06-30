@@ -4,7 +4,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "universal-brute-workpack@0.1.7",
+        "universal-brute-workpack@0.1.8",
         "serve",
         "--stdio"
       ]

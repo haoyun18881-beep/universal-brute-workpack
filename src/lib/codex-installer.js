@@ -7,6 +7,7 @@ import { PACKAGE_NAME, PACKAGE_VERSION } from './version.js';
 const DEFAULT_CODEX_CONFIG = join(homedir(), '.codex', 'config.toml');
 const DEFAULT_INSTALL_BASE = join(homedir(), '.universal-brute-workpack', 'versions');
 const SERVER_KEY = 'ubw';
+const DEFAULT_CODEX_PROFILE = 'codex_daily';
 
 function timestamp() {
   return new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
@@ -48,7 +49,7 @@ function formatTomlStringArray(values) {
   return `[${values.map(tomlLiteral).join(', ')}]`;
 }
 
-function codexBlock({ nodePath, installedBridge, profile = 'admin' }) {
+function codexBlock({ nodePath, installedBridge, profile = DEFAULT_CODEX_PROFILE }) {
   return [
     `[mcp_servers.${SERVER_KEY}]`,
     `command = ${tomlLiteral(nodePath)}`,
@@ -137,6 +138,15 @@ function parseStringArray(body, key) {
   return values;
 }
 
+function parseProfileArg(args = []) {
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === '--profile') return args[i + 1] || '';
+    if (String(arg).startsWith('--profile=')) return String(arg).slice('--profile='.length);
+  }
+  return '';
+}
+
 function inspectConfig(text) {
   const table = findUbwTable(text);
   const duplicates = detectDuplicateCandidates(text);
@@ -157,6 +167,7 @@ function inspectConfig(text) {
       command,
       args,
       bridge: installedBridge,
+      profile: parseProfileArg(args),
       usesNpx: /\bnpx(?:\.cmd)?\b|npx-cli\.js/i.test(`${command} ${args.join(' ')}`),
       bridgeExists: installedBridge ? existsSync(installedBridge) : false,
     },
@@ -213,7 +224,7 @@ function installerOptions(args = {}) {
     codexConfigPath,
     installDir,
     nodePath: resolve(optionValue(args, 'node', process.execPath)),
-    profile: optionValue(args, 'profile', 'admin'),
+    profile: optionValue(args, 'profile', DEFAULT_CODEX_PROFILE),
     dryRun: boolOption(args, 'dry-run'),
     json: boolOption(args, 'json'),
   };

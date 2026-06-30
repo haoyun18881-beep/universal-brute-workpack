@@ -17,11 +17,11 @@ try {
     '',
     '[mcp_servers.ubw]',
     "command = 'npx'",
-    "args = ['-y', 'universal-brute-workpack@0.1.7', 'serve', '--stdio', '--profile', 'admin']",
+    "args = ['-y', 'universal-brute-workpack@0.1.8', 'serve', '--stdio', '--profile', 'admin']",
     '',
     '[mcp_servers.universal_brute_workpack]',
     "command = 'npx'",
-    "args = ['-y', 'universal-brute-workpack@0.1.7', 'serve', '--stdio']",
+    "args = ['-y', 'universal-brute-workpack@0.1.8', 'serve', '--stdio']",
     '',
     '[mcp_servers.other]',
     "command = 'node'",
@@ -48,6 +48,7 @@ try {
   assert(nextConfig.includes('[mcp_servers.universal_brute_workpack]'));
   assert(nextConfig.includes("command = '"));
   assert(nextConfig.includes('src\\bridge.js') || nextConfig.includes('src/bridge.js'));
+  assert(nextConfig.includes("'--profile', 'codex_daily'"));
   assert.equal(nextConfig.includes('npx'), true, 'context7 still uses npx');
   const ubwBlock = nextConfig.slice(nextConfig.indexOf('[mcp_servers.ubw]'), nextConfig.indexOf('[mcp_servers.universal_brute_workpack]'));
   assert.equal(/npx/.test(ubwBlock), false);
@@ -58,6 +59,7 @@ try {
   assert.equal(inspected.duplicates.length, 2);
   assert.equal(inspected.configured.usesNpx, false);
   assert.equal(inspected.configured.bridgeExists, true);
+  assert.equal(inspected.configured.profile, 'codex_daily');
 
   const rollbackDryRun = runCodexRollback({ 'codex-config': codexConfig, 'install-dir': installDir, 'dry-run': true });
   assert.equal(rollbackDryRun.ok, true);
